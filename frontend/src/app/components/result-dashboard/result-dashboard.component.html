@@ -1,0 +1,249 @@
+<!-- Result Dashboard — full analysis view after classification -->
+<div class="dashboard" [style.--dialect-color]="result.dialect_color">
+
+  <!-- ── TOP RESULT CARD ─────────────────────────────────── -->
+  <div class="result-hero glass-card">
+
+    <!-- Left: Dialect Identity -->
+    <div class="dialect-identity">
+      <div class="dialect-flag">{{ result.dialect_flag }}</div>
+      <div class="dialect-name-block">
+        <span class="predicted-label">Identified Dialect</span>
+        <h2 class="dialect-name" [style.color]="result.dialect_color">
+          {{ result.predicted_dialect }}
+        </h2>
+        <span class="dialect-code-badge" [style.border-color]="result.dialect_color"
+              [style.color]="result.dialect_color">
+          {{ result.dialect_code }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Center: Confidence Ring -->
+    <div class="confidence-section">
+      <div class="confidence-ring-wrapper">
+        <svg viewBox="0 0 128 128" class="confidence-svg">
+          <!-- Background track -->
+          <circle cx="64" cy="64" r="54"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.06)"
+                  stroke-width="10"/>
+          <!-- Colored arc -->
+          <circle cx="64" cy="64" r="54"
+                  fill="none"
+                  [attr.stroke]="result.dialect_color"
+                  stroke-width="10"
+                  stroke-linecap="round"
+                  [style.stroke-dasharray]="getCircumference()"
+                  [style.stroke-dashoffset]="getDashOffset()"
+                  [style.filter]="'drop-shadow(0 0 8px ' + result.dialect_color + '88)'"
+                  style="transform: rotate(-90deg); transform-origin: center;
+                         transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)"/>
+          <!-- Center text -->
+          <text x="64" y="60" text-anchor="middle"
+                fill="white" font-size="22" font-weight="800"
+                font-family="Inter, sans-serif">
+            {{ result.confidence }}%
+          </text>
+          <text x="64" y="78" text-anchor="middle"
+                fill="#94A3B8" font-size="10"
+                font-family="Inter, sans-serif">
+            Confidence
+          </text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Right: Audio Info & Probabilities -->
+    <div class="right-panel">
+      <!-- Audio meta -->
+      <div class="audio-meta">
+        <div class="meta-item">
+          <span class="meta-label">📁 File</span>
+          <span class="meta-value">{{ result.audio_info.filename | slice:0:24 }}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">⏱ Duration</span>
+          <span class="meta-value">{{ formatDuration(result.audio_info.duration) }}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">🎚 Sample Rate</span>
+          <span class="meta-value">{{ result.audio_info.sample_rate / 1000 }}kHz</span>
+        </div>
+      </div>
+
+      <!-- Probability bars -->
+      <div class="prob-bars">
+        <p class="section-title" style="font-size:0.75rem; margin-bottom:12px;">
+          All Dialect Probabilities
+        </p>
+        @for (entry of probabilityEntries; track entry.dialect) {
+          <div class="prob-row">
+            <span class="prob-label">{{ entry.dialect }}</span>
+            <div class="progress-bar" style="flex:1">
+              <div class="progress-fill"
+                   [style.width.%]="entry.value"
+                   [style.background]="entry.color">
+              </div>
+            </div>
+            <span class="prob-value" [style.color]="entry.color">{{ entry.value }}%</span>
+          </div>
+        }
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── DIALECT INFO CARD ───────────────────────────────── -->
+  @if (result.dialect_info) {
+    <div class="info-card glass-card" [style.border-left-color]="result.dialect_color">
+      <div class="info-header">
+        <span class="info-icon">{{ result.dialect_flag }}</span>
+        <h3 class="info-title" [style.color]="result.dialect_color">
+          About {{ result.predicted_dialect }} Arabic
+        </h3>
+      </div>
+      <p class="info-desc">{{ result.dialect_info.description }}</p>
+      <div class="info-chips">
+        <div class="info-chip">
+          🌍 <strong>Region:</strong> {{ result.dialect_info.region }}
+        </div>
+        <div class="info-chip">
+          👥 <strong>Speakers:</strong> {{ result.dialect_info.speakers }}
+        </div>
+        <div class="info-chip" style="grid-column: 1 / -1">
+          🗣️ <strong>Characteristics:</strong> {{ result.dialect_info.characteristics }}
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── VISUALIZATION TABS ──────────────────────────────── -->
+  <div class="viz-section glass-card">
+    <div class="viz-header">
+      <h3 class="viz-title">Signal Analysis &amp; Feature Visualization</h3>
+      <p class="viz-subtitle">Features that distinguish this dialect from others</p>
+    </div>
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+      <button class="tab-btn" [class.active]="activeTab === 'waveform'"
+              (click)="setTab('waveform')">
+        📈 Waveform
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'spectrogram'"
+              (click)="setTab('spectrogram')">
+        🌈 Spectrogram
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'mfcc'"
+              (click)="setTab('mfcc')">
+        🧬 MFCCs
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'features'"
+              (click)="setTab('features')">
+        📊 All Features
+      </button>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+
+      @if (activeTab === 'waveform') {
+        <div class="plot-container" style="animation: fadeInUp 0.4s ease">
+          <div class="plot-label">
+            Audio Waveform — amplitude over time
+          </div>
+          <img class="plot-img"
+               [src]="'data:image/png;base64,' + result.plots.waveform"
+               alt="Audio Waveform">
+        </div>
+      }
+
+      @if (activeTab === 'spectrogram') {
+        <div class="plot-container" style="animation: fadeInUp 0.4s ease">
+          <div class="plot-label">
+            Mel Spectrogram — frequency energy distribution over time
+          </div>
+          <img class="plot-img"
+               [src]="'data:image/png;base64,' + result.plots.spectrogram"
+               alt="Mel Spectrogram">
+          <div class="plot-insight">
+            💡 The mel spectrogram shows how energy is distributed across frequency bands over time.
+            Each Arabic dialect has a unique <strong>spectral fingerprint</strong> that the SVM learns.
+          </div>
+        </div>
+      }
+
+      @if (activeTab === 'mfcc') {
+        <div class="plot-container" style="animation: fadeInUp 0.4s ease">
+          <div class="plot-label">
+            MFCC Heatmap &amp; Mean Values — primary classification features (13 coefficients)
+          </div>
+          <img class="plot-img"
+               [src]="'data:image/png;base64,' + result.plots.mfcc"
+               alt="MFCC Heatmap">
+          <div class="plot-insight">
+            💡 <strong>Mel-Frequency Cepstral Coefficients (MFCCs)</strong> capture the vocal tract's
+            resonance characteristics. The 13 MFCC means form the primary feature set for
+            dialect classification — different dialects show distinct MFCC patterns.
+          </div>
+          <!-- MFCC value display -->
+          <div class="mfcc-values">
+            <p class="section-title" style="font-size:0.75rem">MFCC Mean Values</p>
+            <div class="mfcc-grid">
+              @for (val of result.feature_data.mfcc_means; track $index) {
+                <div class="mfcc-cell" [style.background]="val >= 0 ? 'rgba(0,212,170,0.12)' : 'rgba(239,68,68,0.12)'"
+                     [style.border-color]="val >= 0 ? 'rgba(0,212,170,0.3)' : 'rgba(239,68,68,0.3)'">
+                  <span class="mfcc-idx">M{{ $index + 1 }}</span>
+                  <span class="mfcc-val" [style.color]="val >= 0 ? '#00D4AA' : '#FF6B6B'">
+                    {{ val.toFixed(1) }}
+                  </span>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (activeTab === 'features') {
+        <div class="plot-container" style="animation: fadeInUp 0.4s ease">
+          <div class="plot-label">
+            Complete Feature Profile — Chroma · Spectral Contrast · ZCR · RMS
+          </div>
+          <img class="plot-img"
+               [src]="'data:image/png;base64,' + result.plots.features"
+               alt="Feature Visualization">
+          <div class="feature-stats">
+            <div class="stat-card">
+              <span class="stat-icon">🎵</span>
+              <span class="stat-label">ZCR (Speech Sharpness)</span>
+              <span class="stat-value">{{ result.feature_data.zcr_mean.toFixed(4) }}</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-icon">🔊</span>
+              <span class="stat-label">RMS Energy (Loudness)</span>
+              <span class="stat-value">{{ result.feature_data.rms_mean.toFixed(4) }}</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-icon">🎼</span>
+              <span class="stat-label">Chroma Features</span>
+              <span class="stat-value">12 bands</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-icon">📊</span>
+              <span class="stat-label">Spectral Contrast</span>
+              <span class="stat-value">7 sub-bands</span>
+            </div>
+          </div>
+          <div class="plot-insight">
+            💡 <strong>Chroma features</strong> capture tonal characteristics unique to each dialect.
+            <strong>Spectral contrast</strong> measures energy differences between spectral peaks and valleys.
+            <strong>ZCR</strong> reflects speaking style sharpness, while <strong>RMS</strong> measures loudness dynamics.
+          </div>
+        </div>
+      }
+
+    </div>
+  </div>
+
+</div>

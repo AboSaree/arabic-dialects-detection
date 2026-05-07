@@ -1,0 +1,126 @@
+<!-- ═══════════════════════════════════════════════════════
+     ARABIC DIALECT IDENTIFIER — Root Template
+     ═══════════════════════════════════════════════════════ -->
+
+<!-- Floating particles background -->
+<div class="bg-particles">
+  <span class="particle p1"></span>
+  <span class="particle p2"></span>
+  <span class="particle p3"></span>
+  <span class="particle p4"></span>
+  <span class="particle p5"></span>
+</div>
+
+<!-- ── HERO HEADER ─────────────────────────────────────── -->
+<header class="hero">
+  <div class="hero-content">
+
+    <!-- Arabic calligraphy decoration -->
+    <div class="arabic-deco" aria-hidden="true">
+      <span class="arabic-text">تعرف على اللهجة العربية</span>
+    </div>
+
+    <div class="hero-badge">
+      <span class="badge-dot" [class.online]="backendOnline" [class.offline]="!backendOnline"></span>
+      <span>Backend {{ backendOnline ? 'Connected' : 'Offline' }}</span>
+    </div>
+
+    <h1 class="hero-title">
+      <span class="gradient-text">Arabic Dialect</span>
+      <span class="hero-subtitle-word">Identifier</span>
+    </h1>
+
+    <p class="hero-description">
+      Upload a voice recording and our <strong>SVM classifier</strong> will identify
+      the Arabic dialect — Egyptian, Moroccan, Jordanian, or Lebanese —
+      with full spectral analysis and feature visualization.
+    </p>
+
+    <!-- Dialect badges -->
+    <div class="dialect-badges">
+      <span class="dialect-badge" style="--c: #E74C3C">🇪🇬 Egyptian</span>
+      <span class="dialect-badge" style="--c: #27AE60">🇲🇦 Moroccan</span>
+      <span class="dialect-badge" style="--c: #2980B9">🇯🇴 Jordanian</span>
+      <span class="dialect-badge" style="--c: #8E44AD">🇱🇧 Lebanese</span>
+    </div>
+
+  </div>
+
+  <!-- Hero decorative orbs -->
+  <div class="hero-orb orb-1"></div>
+  <div class="hero-orb orb-2"></div>
+  <div class="hero-orb orb-3"></div>
+</header>
+
+<!-- ── MAIN CONTENT ─────────────────────────────────────── -->
+<main class="main-content">
+
+  <!-- Upload Section -->
+  <section class="upload-section" [class.has-result]="result !== null">
+    <app-upload
+      [isLoading]="isLoading"
+      [hasResult]="result !== null"
+      (fileSelected)="onFileSelected($event)"
+      (analyze)="onAnalyze()"
+      (reset)="onReset()">
+    </app-upload>
+  </section>
+
+  <!-- Error Alert -->
+  @if (error) {
+    <div class="error-alert" role="alert">
+      <div class="error-icon">⚠️</div>
+      <div class="error-content">
+        <strong>Analysis Failed</strong>
+        <p>{{ error }}</p>
+      </div>
+      <button class="error-close" (click)="error = null">✕</button>
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (isLoading) {
+    <div class="loading-overlay">
+      <div class="loading-card glass-card">
+        <div class="loading-spinner-ring">
+          <div class="ring ring-1"></div>
+          <div class="ring ring-2"></div>
+          <div class="ring ring-3"></div>
+          <div class="mic-icon">🎙️</div>
+        </div>
+        <h3>Analyzing Audio...</h3>
+        <p>Extracting MFCCs, Chroma, Spectral Contrast</p>
+        <div class="loading-steps">
+          <div class="step active">Feature Extraction</div>
+          <div class="step">SVM Classification</div>
+          <div class="step">Visualization</div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Result Dashboard -->
+  @if (result && !isLoading) {
+    <section id="result-section" class="result-section">
+      <app-result-dashboard [result]="result" (reset)="onReset()">
+      </app-result-dashboard>
+    </section>
+  }
+
+</main>
+
+<!-- ── FOOTER ────────────────────────────────────────────── -->
+<footer class="footer">
+  <div class="footer-content">
+    <div class="footer-brand">
+      <span class="footer-arabic">عربي</span>
+      <span>Arabic Dialect Identifier</span>
+    </div>
+    <p class="footer-note">
+      Powered by SVM · librosa · Django REST Framework · Angular
+    </p>
+    <p class="footer-note">
+      Trained on ADI-17 Dataset · 96% Accuracy
+    </p>
+  </div>
+</footer>

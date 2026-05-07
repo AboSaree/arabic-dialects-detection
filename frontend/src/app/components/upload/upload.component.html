@@ -1,0 +1,88 @@
+<div class="upload-wrapper">
+
+  <!-- Drop Zone -->
+  <div class="drop-zone glass-card"
+       [class.drag-over]="isDragOver"
+       [class.has-file]="selectedFile !== null"
+       [class.compact]="hasResult"
+       (click)="!selectedFile && openFilePicker()"
+       role="button"
+       tabindex="0"
+       (keydown.enter)="!selectedFile && openFilePicker()"
+       [attr.aria-label]="selectedFile ? selectedFile.name : 'Click or drag to upload audio'">
+
+    <input #fileInput
+           type="file"
+           hidden
+           [accept]="ACCEPTED.join(',')"
+           (change)="onFileInputChange($event)">
+
+    @if (!selectedFile) {
+      <!-- Empty state -->
+      <div class="drop-empty" [@.disabled]="true">
+        <div class="drop-icon">
+          <div class="icon-ring">
+            <span class="upload-emoji">🎙️</span>
+          </div>
+        </div>
+        <h3 class="drop-title">Drop your Arabic audio here</h3>
+        <p class="drop-subtitle">or <span class="browse-link" (click)="$event.stopPropagation(); openFilePicker()">browse files</span></p>
+        <div class="format-tags">
+          @for (fmt of ACCEPTED; track fmt) {
+            <span class="fmt-tag">{{ fmt }}</span>
+          }
+        </div>
+        <p class="size-limit">Max {{ MAX_MB }}MB · ~30 seconds recommended</p>
+      </div>
+    } @else {
+      <!-- File selected state -->
+      <div class="file-preview" (click)="$event.stopPropagation()">
+        <div class="file-icon-large">{{ getFileIcon(selectedFile.name) }}</div>
+        <div class="file-meta">
+          <span class="file-name">{{ selectedFile.name }}</span>
+          <span class="file-size">{{ formatFileSize(selectedFile.size) }}</span>
+        </div>
+
+        <!-- Audio player -->
+        @if (audioPreviewUrl) {
+          <audio controls class="audio-player" [src]="audioPreviewUrl">
+            Your browser does not support audio playback.
+          </audio>
+        }
+
+        <button class="change-file-btn" (click)="openFilePicker()">
+          🔄 Change File
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- File Error -->
+  @if (fileError) {
+    <div class="file-error">
+      ⚠️ {{ fileError }}
+    </div>
+  }
+
+  <!-- Action Buttons -->
+  <div class="action-row">
+    @if (!hasResult) {
+      <button class="btn-primary analyze-btn"
+              [disabled]="!selectedFile || isLoading"
+              (click)="onAnalyze()">
+        @if (isLoading) {
+          <span class="spinner"></span>
+          Analyzing...
+        } @else {
+          <span>🔍</span>
+          Identify Dialect
+        }
+      </button>
+    } @else {
+      <button class="btn-reset" (click)="onReset()">
+        🔁 Analyze Another File
+      </button>
+    }
+  </div>
+
+</div>
