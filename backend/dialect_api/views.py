@@ -32,7 +32,7 @@ _scaler = None
 DIALECT_LABELS = {
     'Egyptian':  {'code': 'EGY', 'color': '#E74C3C', 'flag': '🇪🇬'},
     'Moroccan':  {'code': 'MOR', 'color': '#27AE60', 'flag': '🇲🇦'},
-    'Jordanian': {'code': 'JOR', 'color': '#2980B9', 'flag': '🇯🇴'},
+    'Iraqi':     {'code': 'IRA', 'color': '#2980B9', 'flag': '🇮🇶'},
     'Lebanese':  {'code': 'LEB', 'color': '#8E44AD', 'flag': '🇱🇧'},
 }
 
@@ -49,11 +49,11 @@ DIALECT_INFO = {
         'speakers': '~35 million',
         'characteristics': 'Rapid speech, consonant clusters, heavy Berber and French loanwords.',
     },
-    'Jordanian': {
-        'description': 'Jordanian Arabic is a Levantine dialect spoken in Jordan. It shares many features with Palestinian and Syrian Arabic.',
-        'region': 'Jordan, Levant',
-        'speakers': '~10 million',
-        'characteristics': 'Clear pronunciation, "q" often pronounced as a glottal stop, similar to Palestinian Arabic.',
+    'Iraqi': {
+        'description': 'Iraqi Arabic (Mesopotamian Arabic) is spoken across Iraq. It is known for its distinct phonological features and rich Aramaic and Persian influences.',
+        'region': 'Iraq, Mesopotamia',
+        'speakers': '~40 million',
+        'characteristics': 'Distinctive "ch" sound, heavy use of Persian and Aramaic loanwords, unique vowel shifts.',
     },
     'Lebanese': {
         'description': 'Lebanese Arabic is a vibrant Levantine dialect known for its musicality and heavy French influence, spoken in Lebanon.',
