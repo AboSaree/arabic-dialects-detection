@@ -1,0 +1,6 @@
+Django<=6.0.5
+djangorestframework<=3.17.1
+joblib<=1.5.3
+librosa<=0.11.0
+matplotlib<=3.10.9
+numpy<=2.4.4
