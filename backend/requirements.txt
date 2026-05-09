@@ -1,5 +1,6 @@
 Django<=6.0.5
 djangorestframework<=3.17.1
+django-cors-headers<=4.9.0
 joblib<=1.5.3
 librosa<=0.11.0
 matplotlib<=3.10.9
