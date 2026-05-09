@@ -11,7 +11,7 @@ build/
 db.sqlite3
 *.log
 .env
-
+venv/
 # ── Node / Angular ────────────────────────────
 node_modules/
 frontend/.angular/
