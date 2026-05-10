@@ -14,9 +14,10 @@ import { CommonModule } from '@angular/common';
 export class UploadComponent {
   @Input()  isLoading = false;
   @Input()  hasResult = false;
-  @Output() fileSelected = new EventEmitter<File>();
-  @Output() analyze     = new EventEmitter<void>();
-  @Output() reset       = new EventEmitter<void>();
+  @Output() fileSelected    = new EventEmitter<File>();
+  @Output() audioUrlChanged = new EventEmitter<string | null>();
+  @Output() analyze         = new EventEmitter<void>();
+  @Output() reset           = new EventEmitter<void>();
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
@@ -59,14 +60,12 @@ export class UploadComponent {
   processFile(file: File): void {
     this.fileError = null;
 
-    // Validate extension
     const ext = '.' + file.name.split('.').pop()?.toLowerCase();
     if (!this.ACCEPTED.includes(ext)) {
       this.fileError = `Unsupported format. Please use: ${this.ACCEPTED.join(', ')}`;
       return;
     }
 
-    // Validate size
     if (file.size > this.MAX_MB * 1024 * 1024) {
       this.fileError = `File too large. Maximum size is ${this.MAX_MB}MB.`;
       return;
@@ -74,13 +73,14 @@ export class UploadComponent {
 
     this.selectedFile = file;
 
-    // Create preview URL for audio element
     if (this.audioPreviewUrl) {
       URL.revokeObjectURL(this.audioPreviewUrl);
     }
     this.audioPreviewUrl = URL.createObjectURL(file);
 
+    // Emit both the file and the blob URL
     this.fileSelected.emit(file);
+    this.audioUrlChanged.emit(this.audioPreviewUrl);
   }
 
   openFilePicker(): void {
@@ -103,6 +103,7 @@ export class UploadComponent {
     if (this.fileInput) {
       this.fileInput.nativeElement.value = '';
     }
+    this.audioUrlChanged.emit(null);
     this.reset.emit();
   }
 

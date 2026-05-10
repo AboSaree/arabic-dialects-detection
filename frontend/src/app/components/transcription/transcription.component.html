@@ -1,0 +1,88 @@
+<div class="transcription-panel glass-card">
+
+  <!-- ── Header ─────────────────────────────────────────── -->
+  <div class="tx-header">
+    <div class="tx-title-row">
+      <span class="tx-icon">🎙️</span>
+      <h3 class="tx-title">Live Transcription</h3>
+      @if (state === 'loading') {
+        <span class="tx-badge loading">Transcribing…</span>
+      }
+      @if (state === 'ready') {
+        <span class="tx-badge ready">Ready</span>
+      }
+      @if (state === 'error') {
+        <span class="tx-badge error">Error</span>
+      }
+    </div>
+    <p class="tx-subtitle">
+      Words will highlight in real-time as the audio plays
+    </p>
+  </div>
+
+  <!-- ── Loading skeleton ────────────────────────────────── -->
+  @if (state === 'loading') {
+    <div class="tx-skeleton">
+      <div class="skeleton-pulse">
+        <div class="sk-line sk-w80"></div>
+        <div class="sk-line sk-w60"></div>
+        <div class="sk-line sk-w90"></div>
+        <div class="sk-line sk-w50"></div>
+      </div>
+      <div class="loading-label">
+        <span class="spinner-dot"></span>
+        Running Whisper model on your audio…
+      </div>
+    </div>
+  }
+
+  <!-- ── Error state ─────────────────────────────────────── -->
+  @if (state === 'error') {
+    <div class="tx-error">
+      <span class="error-icon">⚠️</span>
+      <p>{{ errorMsg }}</p>
+    </div>
+  }
+
+  <!-- ── Ready: audio player + word display ──────────────── -->
+  @if (state === 'ready') {
+
+    <!-- Audio player (controlled) -->
+    @if (audioUrl) {
+      <audio
+        #audioRef
+        class="tx-audio-player"
+        controls
+        [src]="audioUrl"
+        (play)="onAudioPlay()"
+        (pause)="onAudioPause()"
+        (ended)="onAudioEnded()"
+        (timeupdate)="onAudioTimeUpdate()">
+      </audio>
+    }
+
+    <!-- Word cloud — RTL Arabic layout -->
+    @if (hasWords) {
+      <div class="tx-words" dir="rtl">
+        @for (w of words; track $index) {
+          <span
+            class="tx-word"
+            [class.active]="isActive(w)"
+            [class.spoken]="isSpoken(w)">
+            {{ w.word }}
+          </span>
+        }
+      </div>
+    }
+
+    <!-- Full text read-only field -->
+    @if (fullText) {
+      <div class="tx-full-text">
+        <p class="tx-full-label">Full Transcription</p>
+        <div class="tx-full-content" dir="rtl">{{ fullText }}</div>
+      </div>
+    }
+
+  }
+
+</div>

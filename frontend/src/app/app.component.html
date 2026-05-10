@@ -61,10 +61,24 @@
       [isLoading]="isLoading"
       [hasResult]="result !== null"
       (fileSelected)="onFileSelected($event)"
+      (audioUrlChanged)="onAudioUrlChanged($event)"
       (analyze)="onAnalyze()"
       (reset)="onReset()">
     </app-upload>
   </section>
+
+  <!-- ── TRANSCRIPTION PANEL ─────────────────────────────
+       Appears immediately after a file is selected,
+       before the user clicks "Identify Dialect"
+  ──────────────────────────────────────────────────────── -->
+  @if (selectedFile) {
+    <section class="transcription-section">
+      <app-transcription
+        [audioFile]="selectedFile"
+        [audioUrl]="audioUrl">
+      </app-transcription>
+    </section>
+  }
 
   <!-- Error Alert -->
   @if (error) {
@@ -117,7 +131,7 @@
       <span>Arabic Dialect Identifier</span>
     </div>
     <p class="footer-note">
-      Powered by SVM · librosa · Django REST Framework · Angular
+      Powered by SVM · librosa · Whisper · Django REST Framework · Angular
     </p>
     <p class="footer-note">
       Trained on ADI-17 Dataset · 96% Accuracy

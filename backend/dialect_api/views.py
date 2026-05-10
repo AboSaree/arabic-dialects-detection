@@ -386,3 +386,83 @@ def analyze_audio(request):
             {'error': f'Analysis failed: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+# ── Whisper Transcription ──────────────────────────────────────────────────────
+_whisper_pipe = None
+
+def _load_whisper():
+    global _whisper_pipe
+    if _whisper_pipe is None:
+        from transformers import pipeline as hf_pipeline
+        print("[DialectAPI] Loading Whisper model (ayoubkirouane/whisper-small-ar)...")
+        _whisper_pipe = hf_pipeline(
+            "automatic-speech-recognition",
+            model="ayoubkirouane/whisper-small-ar",
+            return_timestamps="word",
+        )
+        print("[DialectAPI] Whisper model loaded.")
+    return _whisper_pipe
+
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])
+def transcribe_audio(request):
+    """
+    Transcribe an uploaded Arabic audio file using Whisper.
+
+    Audio is decoded with librosa (avoids torchcodec / FFmpeg dependency on Windows).
+
+    Expected: multipart/form-data with 'audio' file field
+    Returns:  JSON  { words: [{word, start, end}], full_text: str }
+    """
+    if 'audio' not in request.FILES:
+        return Response(
+            {'error': 'No audio file provided. Use the "audio" field.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    audio_file = request.FILES['audio']
+
+    try:
+        pipe = _load_whisper()
+
+        # Save upload to a temp file so librosa can read it
+        suffix = os.path.splitext(audio_file.name)[1] or '.wav'
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            for chunk in audio_file.chunks():
+                tmp.write(chunk)
+            tmp_path = tmp.name
+
+        try:
+            # Decode with librosa — no FFmpeg DLL needed on Windows
+            # Whisper expects 16 kHz mono float32 numpy array
+            audio_array, _ = librosa.load(tmp_path, sr=16000, mono=True)
+        finally:
+            os.unlink(tmp_path)
+
+        # Pass numpy array + sampling_rate dict directly to the pipeline.
+        # This completely bypasses torchcodec / soundfile file-path loading.
+        result = pipe({"array": audio_array, "sampling_rate": 16000})
+
+        # result['chunks'] = [{'text': '...', 'timestamp': (start, end)}, ...]
+        chunks = result.get('chunks', [])
+        words = []
+        for chunk in chunks:
+            ts = chunk.get('timestamp', (None, None))
+            words.append({
+                'word':  chunk.get('text', '').strip(),
+                'start': ts[0] if ts[0] is not None else 0,
+                'end':   ts[1] if ts[1] is not None else 0,
+            })
+
+        full_text = result.get('text', '').strip()
+
+        return Response({'words': words, 'full_text': full_text})
+
+    except Exception as e:
+        traceback.print_exc()
+        return Response(
+            {'error': f'Transcription failed: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

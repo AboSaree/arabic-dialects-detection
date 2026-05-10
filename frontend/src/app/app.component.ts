@@ -1,14 +1,15 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UploadComponent } from './components/upload/upload.component';
 import { ResultDashboardComponent } from './components/result-dashboard/result-dashboard.component';
+import { TranscriptionComponent } from './components/transcription/transcription.component';
 import { DialectService } from './services/dialect.service';
 import { AnalysisResult } from './models/analysis-result.interface';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, UploadComponent, ResultDashboardComponent],
+  imports: [CommonModule, UploadComponent, ResultDashboardComponent, TranscriptionComponent],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
@@ -18,6 +19,7 @@ export class AppComponent implements OnInit {
   error: string | null = null;
   backendOnline = false;
   selectedFile: File | null = null;
+  audioUrl: string | null = null;
 
   constructor(private dialectService: DialectService) {}
 
@@ -38,6 +40,10 @@ export class AppComponent implements OnInit {
     this.error = null;
   }
 
+  onAudioUrlChanged(url: string | null): void {
+    this.audioUrl = url;
+  }
+
   onAnalyze(): void {
     if (!this.selectedFile) return;
     this.isLoading = true;
@@ -48,7 +54,6 @@ export class AppComponent implements OnInit {
       next: (res) => {
         this.result = res;
         this.isLoading = false;
-        // Scroll to result after short delay
         setTimeout(() => {
           document.getElementById('result-section')?.scrollIntoView({ behavior: 'smooth' });
         }, 100);
@@ -64,5 +69,6 @@ export class AppComponent implements OnInit {
     this.result = null;
     this.error = null;
     this.selectedFile = null;
+    this.audioUrl = null;
   }
 }

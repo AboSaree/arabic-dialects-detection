@@ -44,3 +44,15 @@ export interface AnalysisResult {
 export interface ApiError {
   error: string;
 }
+
+// Transcription models
+export interface TranscriptionWord {
+  word: string;
+  start: number;
+  end: number;
+}
+
+export interface TranscriptionResult {
+  words: TranscriptionWord[];
+  full_text: string;
+}

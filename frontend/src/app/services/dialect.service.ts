@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { AnalysisResult } from '../models/analysis-result.interface';
+import { AnalysisResult, TranscriptionResult } from '../models/analysis-result.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -15,9 +15,16 @@ export class DialectService {
   analyzeAudio(file: File): Observable<AnalysisResult> {
     const formData = new FormData();
     formData.append('audio', file, file.name);
-
     return this.http
       .post<AnalysisResult>(`${this.apiUrl}/analyze/`, formData)
+      .pipe(catchError(this.handleError));
+  }
+
+  transcribeAudio(file: File): Observable<TranscriptionResult> {
+    const formData = new FormData();
+    formData.append('audio', file, file.name);
+    return this.http
+      .post<TranscriptionResult>(`${this.apiUrl}/transcribe/`, formData)
       .pipe(catchError(this.handleError));
   }
 
