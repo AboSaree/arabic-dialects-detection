@@ -20,6 +20,17 @@ export class DialectService {
       .pipe(catchError(this.handleError));
   }
 
+  analyzeMixedAudio(fileA: File, fileB: File, weightA: number, mixMethod: string): Observable<AnalysisResult> {
+    const formData = new FormData();
+    formData.append('audio1', fileA, fileA.name);
+    formData.append('audio2', fileB, fileB.name);
+    formData.append('weight', weightA.toString());
+    formData.append('mix_method', mixMethod);
+    return this.http
+      .post<AnalysisResult>(`${this.apiUrl}/analyze-mix/`, formData)
+      .pipe(catchError(this.handleError));
+  }
+
   transcribeAudio(file: File): Observable<TranscriptionResult> {
     const formData = new FormData();
     formData.append('audio', file, file.name);

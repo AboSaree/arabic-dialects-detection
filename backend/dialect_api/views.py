@@ -269,6 +269,77 @@ def _make_waveform_plot(y, sr, dialect_color='#D4AF37'):
     return _fig_to_b64(fig)
 
 
+def _save_upload_to_temp(audio_file):
+    suffix = os.path.splitext(audio_file.name)[1] or '.wav'
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        for chunk in audio_file.chunks():
+            tmp.write(chunk)
+        return tmp.name
+
+
+def _trim_and_normalize(y):
+    trimmed, _ = librosa.effects.trim(y, top_db=20)
+    if len(trimmed) == 0:
+        return trimmed
+    return trimmed / (np.max(np.abs(trimmed)) + 1e-9)
+
+
+def _build_analysis_payload(y, sr, filename):
+    model, scaler = _load_models()
+    features, raw = _extract_features(y, sr)
+    features_scaled = scaler.transform(features.reshape(1, -1))
+
+    predicted_label = model.predict(features_scaled)[0]
+    probabilities = model.predict_proba(features_scaled)[0]
+    class_names = model.classes_
+
+    prob_dict = {cls: float(prob) for cls, prob in zip(class_names, probabilities)}
+    confidence = float(prob_dict.get(predicted_label, 0))
+
+    dialect_meta = DIALECT_LABELS.get(predicted_label, {
+        'code': '???', 'color': '#D4AF37', 'flag': '🌍', 'display': predicted_label
+    })
+    dialect_color = dialect_meta['color']
+    display_name = dialect_meta.get('display', predicted_label)
+
+    display_map = {k: v.get('display', k) for k, v in DIALECT_LABELS.items()}
+
+    spectrogram_b64 = _make_spectrogram(y, sr, dialect_color)
+    mfcc_plot_b64 = _make_mfcc_plot(raw['mfccs'], raw['mfccs_mean'], sr, dialect_color)
+    features_plot_b64 = _make_features_plot(raw, display_name, dialect_color)
+    waveform_b64 = _make_waveform_plot(y, sr, dialect_color)
+
+    info = DIALECT_INFO.get(predicted_label, {})
+
+    return {
+        'predicted_dialect': display_name,
+        'dialect_code': dialect_meta['code'],
+        'dialect_flag': dialect_meta['flag'],
+        'dialect_color': dialect_color,
+        'confidence': round(confidence * 100, 1),
+        'probabilities': {display_map.get(k, k): round(v * 100, 1) for k, v in prob_dict.items()},
+        'audio_info': {
+            'duration': round(len(y) / sr, 2),
+            'sample_rate': sr,
+            'filename': filename,
+        },
+        'feature_data': {
+            'mfcc_means': raw['mfccs_mean'],
+            'chroma_means': raw['chroma_mean'],
+            'spectral_contrast_means': raw['contrast_mean'],
+            'zcr_mean': raw['zcr_mean'],
+            'rms_mean': raw['rms_mean'],
+        },
+        'plots': {
+            'waveform': waveform_b64,
+            'spectrogram': spectrogram_b64,
+            'mfcc': mfcc_plot_b64,
+            'features': features_plot_b64,
+        },
+        'dialect_info': info,
+    }
+
+
 @api_view(['GET'])
 def health_check(request):
     """Simple health check endpoint."""
@@ -384,6 +455,95 @@ def analyze_audio(request):
             },
             'dialect_info': info,
         })
+
+    except Exception as e:
+        traceback.print_exc()
+        return Response(
+            {'error': f'Analysis failed: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])
+def analyze_mixed_audio(request):
+    if 'audio1' not in request.FILES or 'audio2' not in request.FILES:
+        return Response(
+            {'error': 'Two audio files are required. Use the "audio1" and "audio2" fields.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if 'weight' not in request.POST:
+        return Response(
+            {'error': 'Mix weight is required. Use the "weight" field.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    audio_file_1 = request.FILES['audio1']
+    audio_file_2 = request.FILES['audio2']
+    mix_method = request.POST.get('mix_method', 'weighted')
+
+    try:
+        weight = float(request.POST['weight'])
+    except ValueError:
+        return Response(
+            {'error': 'Invalid mix weight. Expected a number between 0.0 and 1.0.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if weight < 0.0 or weight > 1.0:
+        return Response(
+            {'error': 'Invalid mix weight. Expected a number between 0.0 and 1.0.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        model, scaler = _load_models()
+        if model is None or scaler is None:
+            return Response(
+                {'error': 'ML model not found. Please ensure dialect_model.pkl and scaler.pkl exist.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+        tmp_path_1 = _save_upload_to_temp(audio_file_1)
+        tmp_path_2 = _save_upload_to_temp(audio_file_2)
+
+        try:
+            y1, sr = librosa.load(tmp_path_1, sr=22050, duration=35)
+            y2, _ = librosa.load(tmp_path_2, sr=22050, duration=35)
+        finally:
+            os.unlink(tmp_path_1)
+            os.unlink(tmp_path_2)
+
+        y1 = _trim_and_normalize(y1)
+        y2 = _trim_and_normalize(y2)
+
+        if len(y1) == 0 or len(y2) == 0:
+            return Response(
+                {'error': 'One of the audio files is silent after trimming. Please upload audible recordings.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        min_length = min(len(y1), len(y2))
+        y1 = y1[:min_length]
+        y2 = y2[:min_length]
+
+        if mix_method == 'splice':
+            splice_len_1 = int(min_length * weight)
+            splice_len_2 = min_length - splice_len_1
+            mixed = np.concatenate([y1[:splice_len_1], y2[:splice_len_2]])
+        else:
+            mixed = weight * y1 + (1 - weight) * y2
+
+        mixed = mixed / (np.max(np.abs(mixed)) + 1e-9)
+
+        if len(mixed) < sr:
+            return Response(
+                {'error': 'Mixed audio is too short. Please provide at least 1 second of audio in each file.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response(_build_analysis_payload(mixed, sr, f'{audio_file_1.name} + {audio_file_2.name}'))
 
     except Exception as e:
         traceback.print_exc()

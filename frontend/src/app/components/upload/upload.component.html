@@ -1,61 +1,241 @@
-<div class="upload-wrapper">
+<div class="upload-wrapper" [class.mix-mode]="mode === 'mix'">
 
-  <!-- Drop Zone -->
-  <div class="drop-zone glass-card"
-       [class.drag-over]="isDragOver"
-       [class.has-file]="selectedFile !== null"
-       [class.compact]="hasResult"
-       (click)="!selectedFile && openFilePicker()"
-       role="button"
-       tabindex="0"
-       (keydown.enter)="!selectedFile && openFilePicker()"
-       [attr.aria-label]="selectedFile ? selectedFile.name : 'Click or drag to upload audio'">
+  <div class="mode-select-wrapper">
+    <select id="upload-mode"
+            class="mode-select"
+            [value]="mode"
+            (change)="onModeChange($event)">
+      <option value="single">Single Audio</option>
+      <option value="mix">Mix Two Audios</option>
+    </select>
+  </div>
 
-    <input #fileInput
-           type="file"
-           hidden
-           [accept]="ACCEPTED.join(',')"
-           (change)="onFileInputChange($event)">
+  @if (mode === 'single') {
+    <!-- Drop Zone -->
+    <div class="drop-zone glass-card"
+         [class.drag-over]="isDragOver"
+         [class.has-file]="selectedFile !== null"
+         [class.compact]="hasResult"
+         (click)="!selectedFile && openFilePicker()"
+         role="button"
+         tabindex="0"
+         (dragover)="onDragOver($event)"
+         (dragleave)="onDragLeave($event)"
+         (drop)="onDrop($event, 'single')"
+         (keydown.enter)="!selectedFile && openFilePicker()"
+         [attr.aria-label]="selectedFile ? selectedFile.name : 'Click or drag to upload audio'">
 
-    @if (!selectedFile) {
-      <!-- Empty state -->
-      <div class="drop-empty" [@.disabled]="true">
-        <div class="drop-icon">
-          <div class="icon-ring">
-            <span class="upload-emoji">🎙️</span>
+      <input #fileInputSingle
+             type="file"
+             hidden
+             [accept]="ACCEPTED.join(',')"
+             (change)="onFileInputChange($event)">
+
+      @if (!selectedFile) {
+        <!-- Empty state -->
+        <div class="drop-empty" [@.disabled]="true">
+          <div class="drop-icon">
+            <div class="icon-ring">
+              <span class="upload-emoji">🎙️</span>
+            </div>
           </div>
+          <h3 class="drop-title">Drop your Arabic audio here</h3>
+          <p class="drop-subtitle">or <span class="browse-link" (click)="$event.stopPropagation(); openFilePicker()">browse files</span></p>
+          <div class="format-tags">
+            @for (fmt of ACCEPTED; track fmt) {
+              <span class="fmt-tag">{{ fmt }}</span>
+            }
+          </div>
+          <p class="size-limit">Max {{ MAX_MB }}MB · ~30 seconds recommended</p>
         </div>
-        <h3 class="drop-title">Drop your Arabic audio here</h3>
-        <p class="drop-subtitle">or <span class="browse-link" (click)="$event.stopPropagation(); openFilePicker()">browse files</span></p>
-        <div class="format-tags">
-          @for (fmt of ACCEPTED; track fmt) {
-            <span class="fmt-tag">{{ fmt }}</span>
+      } @else {
+        <!-- File selected state -->
+        <div class="file-preview" (click)="$event.stopPropagation()">
+          <div class="file-icon-large">{{ getFileIcon(selectedFile.name) }}</div>
+          <div class="file-meta">
+            <span class="file-name">{{ selectedFile.name }}</span>
+            <span class="file-size">{{ formatFileSize(selectedFile.size) }}</span>
+          </div>
+
+          @if (audioPreviewUrl) {
+            <audio controls class="audio-player" [src]="audioPreviewUrl">
+              Your browser does not support audio playback.
+            </audio>
+          }
+
+          <button class="change-file-btn" (click)="openFilePicker()">
+            🔄 Change File
+          </button>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="mix-panel glass-card">
+      <div class="mix-zones-row">
+        <div class="mix-drop-zone drop-zone"
+             [class.drag-over]="isDragOver"
+             [class.has-file]="fileA !== null"
+             (click)="!fileA && openFilePicker('a')"
+             role="button"
+             tabindex="0"
+             (dragover)="onDragOver($event)"
+             (dragleave)="onDragLeave($event)"
+             (drop)="onDrop($event, 'a')"
+             (keydown.enter)="!fileA && openFilePicker('a')"
+             [attr.aria-label]="fileA ? fileA.name : 'Upload first audio file'">
+          <input #fileInputA
+                 type="file"
+                 hidden
+                 [accept]="ACCEPTED.join(',')"
+                 (change)="onMixFileInputChange($event, 'a')">
+
+          @if (!fileA) {
+            <div class="drop-empty">
+              <div class="drop-icon">
+                <div class="icon-ring icon-ring-small">
+                  <span class="upload-emoji">🎙️</span>
+                </div>
+              </div>
+              <h3 class="drop-title">Audio File 1</h3>
+              <p class="drop-subtitle">Drop or <span class="browse-link" (click)="$event.stopPropagation(); openFilePicker('a')">browse</span></p>
+              <div class="format-tags compact-tags">
+                @for (fmt of ACCEPTED; track fmt) {
+                  <span class="fmt-tag">{{ fmt }}</span>
+                }
+              </div>
+              <p class="size-limit">Max {{ MAX_MB }}MB</p>
+            </div>
+          } @else {
+            <div class="file-preview" (click)="$event.stopPropagation()">
+              <div class="file-icon-large">{{ getFileIcon(fileA.name) }}</div>
+              <div class="file-meta">
+                <span class="file-name">{{ fileA.name }}</span>
+                <span class="file-size">{{ formatFileSize(fileA.size) }}</span>
+              </div>
+              @if (audioPreviewUrlA) {
+                <audio controls class="audio-player" [src]="audioPreviewUrlA"></audio>
+              }
+              <button class="change-file-btn" (click)="openFilePicker('a')">🔄 Change File</button>
+            </div>
           }
         </div>
-        <p class="size-limit">Max {{ MAX_MB }}MB · ~30 seconds recommended</p>
+
+        <div class="mix-drop-zone drop-zone"
+             [class.drag-over]="isDragOver"
+             [class.has-file]="fileB !== null"
+             (click)="!fileB && openFilePicker('b')"
+             role="button"
+             tabindex="0"
+             (dragover)="onDragOver($event)"
+             (dragleave)="onDragLeave($event)"
+             (drop)="onDrop($event, 'b')"
+             (keydown.enter)="!fileB && openFilePicker('b')"
+             [attr.aria-label]="fileB ? fileB.name : 'Upload second audio file'">
+          <input #fileInputB
+                 type="file"
+                 hidden
+                 [accept]="ACCEPTED.join(',')"
+                 (change)="onMixFileInputChange($event, 'b')">
+
+          @if (!fileB) {
+            <div class="drop-empty">
+              <div class="drop-icon">
+                <div class="icon-ring icon-ring-small">
+                  <span class="upload-emoji">🎚️</span>
+                </div>
+              </div>
+              <h3 class="drop-title">Audio File 2</h3>
+              <p class="drop-subtitle">Drop or <span class="browse-link" (click)="$event.stopPropagation(); openFilePicker('b')">browse</span></p>
+              <div class="format-tags compact-tags">
+                @for (fmt of ACCEPTED; track fmt) {
+                  <span class="fmt-tag">{{ fmt }}</span>
+                }
+              </div>
+              <p class="size-limit">Max {{ MAX_MB }}MB</p>
+            </div>
+          } @else {
+            <div class="file-preview" (click)="$event.stopPropagation()">
+              <div class="file-icon-large">{{ getFileIcon(fileB.name) }}</div>
+              <div class="file-meta">
+                <span class="file-name">{{ fileB.name }}</span>
+                <span class="file-size">{{ formatFileSize(fileB.size) }}</span>
+              </div>
+              @if (audioPreviewUrlB) {
+                <audio controls class="audio-player" [src]="audioPreviewUrlB"></audio>
+              }
+              <button class="change-file-btn" (click)="openFilePicker('b')">🔄 Change File</button>
+            </div>
+          }
+        </div>
       </div>
-    } @else {
-      <!-- File selected state -->
-      <div class="file-preview" (click)="$event.stopPropagation()">
-        <div class="file-icon-large">{{ getFileIcon(selectedFile.name) }}</div>
-        <div class="file-meta">
-          <span class="file-name">{{ selectedFile.name }}</span>
-          <span class="file-size">{{ formatFileSize(selectedFile.size) }}</span>
+
+      <div class="mix-controls">
+        <div class="mode-select-wrapper mix-method-wrapper">
+          <select id="mix-method"
+                  class="mode-select mix-method-select"
+                  [value]="mixMethod"
+                  (change)="onMixMethodChange($event)">
+            <option value="weighted">Weighted Average</option>
+            <option value="splice">Time Splice</option>
+          </select>
+        </div>
+        <p class="mix-method-desc">
+          @if (mixMethod === 'weighted') {
+            Both voices blended proportionally by weight
+          } @else {
+            Audio 1 plays first for its weight-duration, then Audio 2
+          }
+        </p>
+
+        <div class="weights-row">
+          <div class="weight-col">
+            <div class="weight-label">
+              <span>Audio 1</span>
+              <span>{{ weightA }}%</span>
+            </div>
+            <input type="range"
+                   class="weight-slider"
+                   min="0"
+                   max="100"
+                   [(ngModel)]="weightA"
+                   (input)="onWeightAChange()">
+          </div>
+
+          <button class="swap-btn" type="button" (click)="swapWeights()" title="Swap weights">⇄</button>
+
+          <div class="weight-col">
+            <div class="weight-label">
+              <span>Audio 2</span>
+              <span>{{ weightB }}%</span>
+            </div>
+            <input type="range"
+                   class="weight-slider"
+                   min="0"
+                   max="100"
+                   [(ngModel)]="weightB"
+                   (input)="onWeightBChange()">
+          </div>
         </div>
 
-        <!-- Audio player -->
-        @if (audioPreviewUrl) {
-          <audio controls class="audio-player" [src]="audioPreviewUrl">
-            Your browser does not support audio playback.
-          </audio>
+        @if (mixedAudioUrl && hasResult) {
+          <div class="mixed-preview glass-card">
+            <div class="mixed-preview-header">
+              <span class="mixed-icon">🎚️</span>
+              <div>
+                <div class="mixed-title">Mixed Output</div>
+                <div class="mixed-subtitle">
+                  {{ mixMethod === 'weighted' ? 'Weighted blend · ' : 'Spliced · ' }}{{ weightA }}% Audio 1 + {{ weightB }}% Audio 2
+                </div>
+              </div>
+            </div>
+            <audio controls class="audio-player mixed-player" [src]="mixedAudioUrl">
+              Your browser does not support audio playback.
+            </audio>
+          </div>
         }
-
-        <button class="change-file-btn" (click)="openFilePicker()">
-          🔄 Change File
-        </button>
       </div>
-    }
-  </div>
+    </div>
+  }
 
   <!-- File Error -->
   @if (fileError) {
@@ -68,20 +248,31 @@
   <div class="action-row">
     @if (!hasResult) {
       <button class="btn-primary analyze-btn"
-              [disabled]="!selectedFile || isLoading"
+              [disabled]="!canAnalyze"
               (click)="onAnalyze()">
         @if (isLoading) {
           <span class="spinner"></span>
-          Analyzing...
+          Reanalyze
         } @else {
           <span>🔍</span>
-          Identify Dialect
+          Analyze
         }
       </button>
     } @else {
-      <button class="btn-reset" (click)="onReset()">
-        🔁 Analyze Another File
-      </button>
+      @if (mode === 'mix') {
+        <button class="btn-reset" (click)="onReset()">
+          🔁 Analyze Another File
+        </button>
+        <button class="btn-reanalyze"
+                [disabled]="!fileA || !fileB || isLoading"
+                (click)="onAnalyze()">
+          🔄 Reanalyze
+        </button>
+      } @else {
+        <button class="btn-reset" (click)="onReset()">
+          🔁 Analyze Another File
+        </button>
+      }
     }
   </div>
 
