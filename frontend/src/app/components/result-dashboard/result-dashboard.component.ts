@@ -18,7 +18,7 @@ export class ResultDashboardComponent implements OnInit {
   animatedConfidence = 0;
 
   private dialectColors: Record<string, string> = {
-    'Saudi':     '#00843D',
+    'Lebanese':  '#FFFFFF',
     'Moroccan':  '#C1272D',
     'Iraqi':     '#CE1126',
     'Sudanese':  '#00A651',

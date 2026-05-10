@@ -6,7 +6,7 @@
 
     <!-- Left: Dialect Identity -->
     <div class="dialect-identity">
-      <div class="dialect-flag" [style.color]="result.dialect_color">{{ result.dialect_code }}</div>
+      <div class="dialect-flag">{{ result.dialect_flag || result.dialect_code }}</div>
       <div class="dialect-name-block">
         <span class="predicted-label">Identified Dialect</span>
         <h2 class="dialect-name" [style.color]="result.dialect_color">

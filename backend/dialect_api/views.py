@@ -30,18 +30,18 @@ _model = None
 _scaler = None
 
 DIALECT_LABELS = {
-    'Saudi Arabian':  {'code': 'KSA', 'color': '#00843D', 'flag': '', 'display': 'Saudi'},
-    'Moroccan':       {'code': 'MOR', 'color': '#C1272D', 'flag': '', 'display': 'Moroccan'},
-    'Iraqi':          {'code': 'IRA', 'color': '#CE1126', 'flag': '', 'display': 'Iraqi'},
-    'Sudanese':       {'code': 'SUD', 'color': '#00A651', 'flag': '', 'display': 'Sudanese'},
+    'Lebanese':       {'code': 'LEB', 'color': '#FFFFFF', 'flag': '🇱🇧', 'display': 'Lebanese'},
+    'Moroccan':       {'code': 'MOR', 'color': '#C1272D', 'flag': '🇲🇦', 'display': 'Moroccan'},
+    'Iraqi':          {'code': 'IRA', 'color': '#CE1126', 'flag': '🇮🇶', 'display': 'Iraqi'},
+    'Sudanese':       {'code': 'SUD', 'color': '#00A651', 'flag': '🇸🇩', 'display': 'Sudanese'},
 }
 
 DIALECT_INFO = {
-    'Saudi Arabian': {
-        'description': 'Saudi Arabic (Khaliji/Najdi) is spoken across the Kingdom of Saudi Arabia. It encompasses several sub-dialects and is widely recognized due to Saudi Arabia\'s cultural and economic influence in the region.',
-        'region': 'Saudi Arabia, Arabian Peninsula',
-        'speakers': '~27 million',
-        'characteristics': 'Distinctive guttural sounds, preservation of classical Arabic features, unique vocabulary influenced by Bedouin heritage.',
+    'Lebanese': {
+        'description': 'Lebanese Arabic is a vibrant Levantine dialect known for its musicality and heavy French influence, spoken in Lebanon.',
+        'region': 'Lebanon, Levant',
+        'speakers': '~4 million native + diaspora',
+        'characteristics': 'Musical intonation, French loanwords, distinctive vowel sounds.',
     },
     'Moroccan': {
         'description': 'Moroccan Arabic (Darija) is a unique dialect heavily influenced by Berber, French, and Spanish. It\'s often considered the most distinct Arabic dialect.',
@@ -112,6 +112,7 @@ def _extract_features(y, sr):
     rms_mean = float(np.mean(rms))
 
     features = np.hstack([mfccs_mean, chroma_mean, contrast_mean, zcr_mean, rms_mean])
+    
     return features, {
         'mfccs': mfccs,
         'mfccs_mean': mfccs_mean.tolist(),
