@@ -21,7 +21,7 @@ export class ResultDashboardComponent implements OnInit {
     'Lebanese':  '#FFFFFF',
     'Moroccan':  '#C1272D',
     'Iraqi':     '#CE1126',
-    'Sudanese':  '#00A651',
+    'Egyptian':  '#000000',
   };
 
   ngOnInit(): void {

@@ -33,7 +33,7 @@ DIALECT_LABELS = {
     'Lebanese':       {'code': 'LEB', 'color': '#FFFFFF', 'flag': '🇱🇧', 'display': 'Lebanese'},
     'Moroccan':       {'code': 'MOR', 'color': '#C1272D', 'flag': '🇲🇦', 'display': 'Moroccan'},
     'Iraqi':          {'code': 'IRA', 'color': '#CE1126', 'flag': '🇮🇶', 'display': 'Iraqi'},
-    'Sudanese':       {'code': 'SUD', 'color': '#00A651', 'flag': '🇸🇩', 'display': 'Sudanese'},
+    'Egyptian':       {'code': 'EGY', 'color': '#000000', 'flag': '🇪🇬', 'display': 'Egyptian'},
 }
 
 DIALECT_INFO = {
@@ -55,11 +55,11 @@ DIALECT_INFO = {
         'speakers': '~40 million',
         'characteristics': 'Distinctive "ch" sound, heavy use of Persian and Aramaic loanwords, unique vowel shifts.',
     },
-    'Sudanese': {
-        'description': 'Sudanese Arabic is spoken across Sudan. It is influenced by Nubian, Beja, and other local languages, giving it a unique phonological and lexical character distinct from other Arabic dialects.',
-        'region': 'Sudan, East Africa',
-        'speakers': '~30 million',
-        'characteristics': 'Unique intonation patterns, Nubian loanwords, distinctive vowel sounds, and soft consonant pronunciation.',
+    'Egyptian': {
+        'description': 'Egyptian Arabic is the most widely spoken and understood dialect in the Arab world, largely due to the historic influence of Egyptian cinema and media.',
+        'region': 'Egypt, North Africa',
+        'speakers': '~100 million',
+        'characteristics': 'Pronunciation of "jeem" as a hard "g", distinct vowel shortenings, and unique vocabulary.',
     },
 }
 
