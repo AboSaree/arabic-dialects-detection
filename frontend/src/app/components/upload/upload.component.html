@@ -63,7 +63,7 @@
             </audio>
           }
 
-          <button class="change-file-btn" (click)="openFilePicker()">
+          <button type="button" class="change-file-btn" (click)="openFilePicker()">
             🔄 Change File
           </button>
         </div>
@@ -83,11 +83,11 @@
              (drop)="onDrop($event, 'a')"
              (keydown.enter)="!fileA && openFilePicker('a')"
              [attr.aria-label]="fileA ? fileA.name : 'Upload first audio file'">
-          <input #fileInputA
-                 type="file"
-                 hidden
-                 [accept]="ACCEPTED.join(',')"
-                 (change)="onMixFileInputChange($event, 'a')">
+           <input #fileInputA
+             type="file"
+             hidden
+             [accept]="ACCEPTED.join(',')"
+             (change)="onMixFileInputChange($event, 'a')">
 
           @if (!fileA) {
             <div class="drop-empty">
@@ -115,7 +115,7 @@
               @if (audioPreviewUrlA) {
                 <audio controls class="audio-player" [src]="audioPreviewUrlA"></audio>
               }
-              <button class="change-file-btn" (click)="openFilePicker('a')">🔄 Change File</button>
+              <button type="button" class="change-file-btn" (click)="$event.stopPropagation(); openFilePicker('a')">🔄 Change File</button>
             </div>
           }
         </div>
@@ -131,11 +131,11 @@
              (drop)="onDrop($event, 'b')"
              (keydown.enter)="!fileB && openFilePicker('b')"
              [attr.aria-label]="fileB ? fileB.name : 'Upload second audio file'">
-          <input #fileInputB
-                 type="file"
-                 hidden
-                 [accept]="ACCEPTED.join(',')"
-                 (change)="onMixFileInputChange($event, 'b')">
+           <input #fileInputB
+             type="file"
+             hidden
+             [accept]="ACCEPTED.join(',')"
+             (change)="onMixFileInputChange($event, 'b')">
 
           @if (!fileB) {
             <div class="drop-empty">
@@ -163,30 +163,13 @@
               @if (audioPreviewUrlB) {
                 <audio controls class="audio-player" [src]="audioPreviewUrlB"></audio>
               }
-              <button class="change-file-btn" (click)="openFilePicker('b')">🔄 Change File</button>
+              <button type="button" class="change-file-btn" (click)="$event.stopPropagation(); openFilePicker('b')">🔄 Change File</button>
             </div>
           }
         </div>
       </div>
 
       <div class="mix-controls">
-        <div class="mode-select-wrapper mix-method-wrapper">
-          <select id="mix-method"
-                  class="mode-select mix-method-select"
-                  [value]="mixMethod"
-                  (change)="onMixMethodChange($event)">
-            <option value="weighted">Weighted Average</option>
-            <option value="splice">Time Splice</option>
-          </select>
-        </div>
-        <p class="mix-method-desc">
-          @if (mixMethod === 'weighted') {
-            Both voices blended proportionally by weight
-          } @else {
-            Audio 1 plays first for its weight-duration, then Audio 2
-          }
-        </p>
-
         <div class="weights-row">
           <div class="weight-col">
             <div class="weight-label">

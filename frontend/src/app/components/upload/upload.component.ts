@@ -145,15 +145,30 @@ export class UploadComponent {
   }
 
   openFilePicker(target: 'single' | MixTarget = 'single'): void {
+    const openPicker = (input?: ElementRef<HTMLInputElement>): void => {
+      const nativeInput = input?.nativeElement;
+      if (!nativeInput) {
+        return;
+      }
+
+      const picker = nativeInput as HTMLInputElement & { showPicker?: () => void };
+      if (typeof picker.showPicker === 'function') {
+        picker.showPicker();
+        return;
+      }
+
+      nativeInput.click();
+    };
+
     if (target === 'a') {
-      this.fileInputA?.nativeElement.click();
+      openPicker(this.fileInputA);
       return;
     }
     if (target === 'b') {
-      this.fileInputB?.nativeElement.click();
+      openPicker(this.fileInputB);
       return;
     }
-    this.fileInputSingle?.nativeElement.click();
+    openPicker(this.fileInputSingle);
   }
 
   async onAnalyze(): Promise<void> {
