@@ -6,7 +6,7 @@
 
     <!-- Left: Dialect Identity -->
     <div class="dialect-identity">
-      <div class="dialect-flag">{{ result.dialect_flag }}</div>
+      <div class="dialect-flag">{{ result.dialect_flag || result.dialect_code }}</div>
       <div class="dialect-name-block">
         <span class="predicted-label">Identified Dialect</span>
         <h2 class="dialect-name" [style.color]="result.dialect_color">
@@ -98,7 +98,7 @@
   @if (result.dialect_info) {
     <div class="info-card glass-card" [style.border-left-color]="result.dialect_color">
       <div class="info-header">
-        <span class="info-icon">{{ result.dialect_flag }}</span>
+        <span class="info-icon" [style.color]="result.dialect_color">🌍</span>
         <h3 class="info-title" [style.color]="result.dialect_color">
           About {{ result.predicted_dialect }} Arabic
         </h3>
@@ -129,19 +129,19 @@
     <div class="tab-bar">
       <button class="tab-btn" [class.active]="activeTab === 'waveform'"
               (click)="setTab('waveform')">
-        📈 Waveform
+        Waveform
       </button>
       <button class="tab-btn" [class.active]="activeTab === 'spectrogram'"
               (click)="setTab('spectrogram')">
-        🌈 Spectrogram
+        Spectrogram
       </button>
       <button class="tab-btn" [class.active]="activeTab === 'mfcc'"
               (click)="setTab('mfcc')">
-        🧬 MFCCs
+        MFCCs
       </button>
       <button class="tab-btn" [class.active]="activeTab === 'features'"
               (click)="setTab('features')">
-        📊 All Features
+        All Features
       </button>
     </div>
 

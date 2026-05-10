@@ -18,10 +18,10 @@ export class ResultDashboardComponent implements OnInit {
   animatedConfidence = 0;
 
   private dialectColors: Record<string, string> = {
-    'Egyptian':  '#E74C3C',
-    'Moroccan':  '#27AE60',
-    'Iraqi':     '#2980B9',
-    'Lebanese':  '#8E44AD',
+    'Lebanese':  '#FFFFFF',
+    'Moroccan':  '#C1272D',
+    'Iraqi':     '#CE1126',
+    'Sudanese':  '#00A651',
   };
 
   ngOnInit(): void {

@@ -30,18 +30,18 @@ _model = None
 _scaler = None
 
 DIALECT_LABELS = {
-    'Egyptian':  {'code': 'EGY', 'color': '#E74C3C', 'flag': '🇪🇬'},
-    'Moroccan':  {'code': 'MOR', 'color': '#27AE60', 'flag': '🇲🇦'},
-    'Iraqi':     {'code': 'IRA', 'color': '#2980B9', 'flag': '🇮🇶'},
-    'Lebanese':  {'code': 'LEB', 'color': '#8E44AD', 'flag': '🇱🇧'},
+    'Lebanese':       {'code': 'LEB', 'color': '#FFFFFF', 'flag': '🇱🇧', 'display': 'Lebanese'},
+    'Moroccan':       {'code': 'MOR', 'color': '#C1272D', 'flag': '🇲🇦', 'display': 'Moroccan'},
+    'Iraqi':          {'code': 'IRA', 'color': '#CE1126', 'flag': '🇮🇶', 'display': 'Iraqi'},
+    'Sudanese':       {'code': 'SUD', 'color': '#00A651', 'flag': '🇸🇩', 'display': 'Sudanese'},
 }
 
 DIALECT_INFO = {
-    'Egyptian': {
-        'description': 'Egyptian Arabic (Masri) is spoken by ~100 million people and is the most widely understood dialect across the Arab world due to Egypt\'s influential media industry.',
-        'region': 'Egypt, North Africa',
-        'speakers': '~100 million',
-        'characteristics': 'Known for "g" replacing "q", soft intonation, and rich colloquial expressions.',
+    'Lebanese': {
+        'description': 'Lebanese Arabic is a vibrant Levantine dialect known for its musicality and heavy French influence, spoken in Lebanon.',
+        'region': 'Lebanon, Levant',
+        'speakers': '~4 million native + diaspora',
+        'characteristics': 'Musical intonation, French loanwords, distinctive vowel sounds.',
     },
     'Moroccan': {
         'description': 'Moroccan Arabic (Darija) is a unique dialect heavily influenced by Berber, French, and Spanish. It\'s often considered the most distinct Arabic dialect.',
@@ -55,11 +55,11 @@ DIALECT_INFO = {
         'speakers': '~40 million',
         'characteristics': 'Distinctive "ch" sound, heavy use of Persian and Aramaic loanwords, unique vowel shifts.',
     },
-    'Lebanese': {
-        'description': 'Lebanese Arabic is a vibrant Levantine dialect known for its musicality and heavy French influence, spoken in Lebanon.',
-        'region': 'Lebanon, Levant',
-        'speakers': '~4 million native + diaspora',
-        'characteristics': 'Musical intonation, French loanwords, distinctive vowel sounds.',
+    'Sudanese': {
+        'description': 'Sudanese Arabic is spoken across Sudan. It is influenced by Nubian, Beja, and other local languages, giving it a unique phonological and lexical character distinct from other Arabic dialects.',
+        'region': 'Sudan, East Africa',
+        'speakers': '~30 million',
+        'characteristics': 'Unique intonation patterns, Nubian loanwords, distinctive vowel sounds, and soft consonant pronunciation.',
     },
 }
 
@@ -112,6 +112,7 @@ def _extract_features(y, sr):
     rms_mean = float(np.mean(rms))
 
     features = np.hstack([mfccs_mean, chroma_mean, contrast_mean, zcr_mean, rms_mean])
+    
     return features, {
         'mfccs': mfccs,
         'mfccs_mean': mfccs_mean.tolist(),
@@ -339,26 +340,30 @@ def analyze_audio(request):
         confidence = float(prob_dict.get(predicted_label, 0))
 
         dialect_meta = DIALECT_LABELS.get(predicted_label, {
-            'code': '???', 'color': '#D4AF37', 'flag': '🌍'
+            'code': '???', 'color': '#D4AF37', 'flag': '🌍', 'display': predicted_label
         })
         dialect_color = dialect_meta['color']
+        display_name = dialect_meta.get('display', predicted_label)
+
+        # Build a mapping from raw model labels to display names
+        display_map = {k: v.get('display', k) for k, v in DIALECT_LABELS.items()}
 
         # Generate visualizations
         spectrogram_b64 = _make_spectrogram(y, sr, dialect_color)
         mfcc_plot_b64 = _make_mfcc_plot(raw['mfccs'], raw['mfccs_mean'], sr, dialect_color)
-        features_plot_b64 = _make_features_plot(raw, predicted_label, dialect_color)
+        features_plot_b64 = _make_features_plot(raw, display_name, dialect_color)
         waveform_b64 = _make_waveform_plot(y, sr, dialect_color)
 
         # Dialect info
         info = DIALECT_INFO.get(predicted_label, {})
 
         return Response({
-            'predicted_dialect': predicted_label,
+            'predicted_dialect': display_name,
             'dialect_code': dialect_meta['code'],
             'dialect_flag': dialect_meta['flag'],
             'dialect_color': dialect_color,
             'confidence': round(confidence * 100, 1),
-            'probabilities': {k: round(v * 100, 1) for k, v in prob_dict.items()},
+            'probabilities': {display_map.get(k, k): round(v * 100, 1) for k, v in prob_dict.items()},
             'audio_info': {
                 'duration': round(len(y) / sr, 2),
                 'sample_rate': sr,
