@@ -24,10 +24,10 @@
   --pink:         #EC4899;
 
   /* Dialect colours (flag-inspired) */
-  --lebanese:     #FFFFFF;
-  --moroccan:     #C1272D;
-  --iraqi:        #CE1126;
-  --egyptian:     #000000;
+  --egyptian:     #CE1126;
+  --gulf:         #009736;
+  --levantine:    #007A3D;
+  --maghrebi:     #C1272D;
 
   /* Text */
   --text-primary:   #F0F4FF;

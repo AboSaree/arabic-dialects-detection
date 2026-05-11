@@ -1,11 +1,14 @@
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { NgChartsModule } from 'ng2-charts';
+import { ChartConfiguration, TooltipItem } from 'chart.js';
+import 'chart.js/auto';
 import { AnalysisResult } from '../../models/analysis-result.interface';
 
 @Component({
   selector: 'app-result-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, NgChartsModule],
   templateUrl: './result-dashboard.component.html',
   styleUrls: ['./result-dashboard.component.css']
 })
@@ -14,14 +17,24 @@ export class ResultDashboardComponent implements OnInit {
   @Output() reset = new EventEmitter<void>();
 
   activeTab: 'spectrogram' | 'mfcc' | 'features' | 'waveform' = 'spectrogram';
+  activeFeatureTab: FeaturePlotTab = 'rms';
   probabilityEntries: { dialect: string; value: number; color: string }[] = [];
   animatedConfidence = 0;
 
+  // Chart data
+  zcrChartData: ChartConfiguration['data'] = { labels: [], datasets: [] };
+  spectralChartData: ChartConfiguration['data'] = { labels: [], datasets: [] };
+  chromaChartData: ChartConfiguration['data'] = { labels: [], datasets: [] };
+  
+  zcrChartOptions: ChartConfiguration['options'] = {};
+  spectralChartOptions: ChartConfiguration['options'] = {};
+  chromaChartOptions: ChartConfiguration['options'] = {};
+
   private dialectColors: Record<string, string> = {
-    'Lebanese':  '#FFFFFF',
-    'Moroccan':  '#C1272D',
-    'Iraqi':     '#CE1126',
-    'Egyptian':  '#000000',
+    'Egyptian Arabic':  '#CE1126',
+    'Gulf Arabic':      '#009736',
+    'Levantine Arabic': '#007A3D',
+    'Maghrebi Arabic':  '#C1272D',
   };
 
   ngOnInit(): void {
@@ -38,10 +51,130 @@ export class ResultDashboardComponent implements OnInit {
     setTimeout(() => {
       this.animatedConfidence = this.result.confidence;
     }, 200);
+
+    // Initialize charts
+    this.initializeCharts();
+    this.initializeFeatureTab();
+  }
+
+  private initializeFeatureTab(): void {
+    const tabs: FeaturePlotTab[] = ['rms', 'zcr', 'spectral_contrast', 'chroma'];
+    this.activeFeatureTab = tabs.find((tab) => Boolean(this.result.plots[tab])) || 'rms';
+  }
+
+  private initializeCharts(): void {
+    const dialectColor = this.result.dialect_color;
+    
+    // ── Zero Crossing Rate Chart ──
+    if (this.result.feature_data?.zcr_raw && Array.isArray(this.result.feature_data.zcr_raw)) {
+      this.zcrChartData = {
+        labels: this.result.feature_data.zcr_raw.map((_: number, i: number) => `${i}`),
+        datasets: [{
+          label: 'Zero Crossing Rate',
+          data: this.result.feature_data.zcr_raw,
+          borderColor: dialectColor,
+          backgroundColor: `${dialectColor}20`,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 2,
+          pointBackgroundColor: dialectColor,
+        }]
+      };
+
+      this.zcrChartOptions = {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { mode: 'index', intersect: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: '#333333' },
+            ticks: { color: '#AAAAAA' }
+          },
+          x: { grid: { color: '#333333' }, ticks: { color: '#AAAAAA' } }
+        }
+      };
+    }
+
+    // ── Spectral Contrast Chart ──
+    if (this.result.feature_data?.spectral_contrast_means && Array.isArray(this.result.feature_data.spectral_contrast_means)) {
+      this.spectralChartData = {
+        labels: Array.from({ length: this.result.feature_data.spectral_contrast_means.length }, (_, i) => `Band ${i + 1}`),
+        datasets: [{
+          label: 'Spectral Contrast (dB)',
+          data: this.result.feature_data.spectral_contrast_means,
+          backgroundColor: dialectColor,
+          borderColor: dialectColor,
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: dialectColor,
+        }]
+      };
+
+      this.spectralChartOptions = {
+        indexAxis: 'y' as const,
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (context: TooltipItem<'bar'>) => `${(context.parsed.x ?? 0).toFixed(2)} dB` } }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            grid: { color: '#333333' },
+            ticks: { color: '#AAAAAA' }
+          },
+          y: { grid: { color: '#333333' }, ticks: { color: '#AAAAAA' } }
+        }
+      };
+    }
+
+    // ── Chroma Features Chart ──
+    if (this.result.feature_data?.chroma_means && Array.isArray(this.result.feature_data.chroma_means)) {
+      const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+      this.chromaChartData = {
+        labels: notes,
+        datasets: [{
+          label: 'Chroma Features',
+          data: this.result.feature_data.chroma_means,
+          backgroundColor: '#00D4AA',
+          borderColor: '#00D4AA',
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: '#00D4AA',
+        }]
+      };
+
+      this.chromaChartOptions = {
+        indexAxis: 'y' as const,
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (context: TooltipItem<'bar'>) => `Energy: ${(context.parsed.x ?? 0).toFixed(3)}` } }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            grid: { color: '#333333' },
+            ticks: { color: '#AAAAAA' }
+          },
+          y: { grid: { color: '#333333' }, ticks: { color: '#AAAAAA' } }
+        }
+      };
+    }
   }
 
   setTab(tab: 'spectrogram' | 'mfcc' | 'features' | 'waveform'): void {
     this.activeTab = tab;
+  }
+
+  setFeatureTab(tab: FeaturePlotTab): void {
+    this.activeFeatureTab = tab;
   }
 
   getDialectColor(dialect: string): string {
@@ -75,3 +208,5 @@ export class ResultDashboardComponent implements OnInit {
     return m > 0 ? `${m}m ${s}s` : `${s}s`;
   }
 }
+
+type FeaturePlotTab = 'rms' | 'zcr' | 'spectral_contrast' | 'chroma';

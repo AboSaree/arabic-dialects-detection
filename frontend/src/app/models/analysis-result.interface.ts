@@ -12,7 +12,10 @@ export interface FeatureData {
   spectral_contrast_means: number[];
   zcr_mean: number;
   rms_mean: number;
+  zcr_raw?: number[];
+  rms_raw?: number[];
 }
+
 
 export interface DialectInfo {
   description: string;
@@ -26,6 +29,10 @@ export interface Plots {
   spectrogram: string;
   mfcc: string;
   features: string;
+  rms?: string;
+  zcr?: string;
+  spectral_contrast?: string;
+  chroma?: string;
 }
 
 export interface AnalysisResult {

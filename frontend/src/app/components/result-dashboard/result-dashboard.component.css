@@ -269,31 +269,137 @@
 }
 .plot-insight strong { color: var(--text-primary); }
 
-/* Feature Stats row */
-.feature-stats {
+/* ── Enhanced Feature Statistics ────────────────────────────── */
+.feature-stats-enhanced {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-  margin-top: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
 }
 
-.stat-card {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 12px;
+.stat-card-enhanced {
+  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-md);
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
+  gap: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card-enhanced::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--dialect-color) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.stat-card-enhanced:hover {
+  background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 100%);
+  border-color: rgba(255,255,255,0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.stat-card-enhanced:hover::before {
+  opacity: 1;
+}
+
+.stat-card-enhanced .stat-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.stat-info-enhanced {
+  display: flex;
+  flex-direction: column;
   gap: 4px;
 }
 
-.stat-icon { font-size: 1.5rem; margin-bottom: 4px; }
-.stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
-.stat-value { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); }
+.stat-label-enhanced {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
 
-/* MFCC Grid */
+.stat-desc-enhanced {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.stat-value-enhanced {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--dialect-color);
+  margin-top: 6px;
+  text-shadow: 0 0 8px rgba(212,175,55,0.2);
+}
+
+/* ── Charts Grid Layout ─────────────────────────────────────── */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.chart-wrapper {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.3s ease;
+}
+
+.chart-wrapper:hover {
+  border-color: rgba(255,255,255,0.15);
+  background: rgba(0,0,0,0.3);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.chart-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.chart-container {
+  position: relative;
+  height: 300px;
+  width: 100%;
+}
+
+.chart-container canvas {
+  max-height: 100%;
+}
+
+.chart-insight {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+/* ── Feature Stats (Fallback) ────────────────────────────────– */
 .mfcc-values { margin-top: 12px; }
 .mfcc-grid {
   display: grid;
@@ -311,3 +417,55 @@
 }
 .mfcc-idx { font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 2px; }
 .mfcc-val { font-size: 0.85rem; font-weight: 700; font-family: monospace; }
+
+/* Detailed feature plot tabs */
+.feature-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 6px;
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-md);
+}
+
+.feature-tab-btn {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.feature-tab-btn:hover,
+.feature-tab-btn.active {
+  background: color-mix(in srgb, var(--dialect-color) 18%, rgba(255,255,255,0.06));
+  border-color: color-mix(in srgb, var(--dialect-color) 45%, rgba(255,255,255,0.12));
+  color: var(--text-primary);
+}
+
+.feature-plot-panel {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feature-plot-img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+}

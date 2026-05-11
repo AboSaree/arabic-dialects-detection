@@ -141,7 +141,7 @@
       </button>
       <button class="tab-btn" [class.active]="activeTab === 'features'"
               (click)="setTab('features')">
-        All Features
+        Interactive Charts
       </button>
     </div>
 
@@ -177,7 +177,7 @@
       @if (activeTab === 'mfcc') {
         <div class="plot-container" style="animation: fadeInUp 0.4s ease">
           <div class="plot-label">
-            MFCC Heatmap &amp; Mean Values — primary classification features (13 coefficients)
+            MFCC Heatmap &amp; Mean Values — primary classification features (40 coefficients)
           </div>
           <img class="plot-img"
                [src]="'data:image/png;base64,' + result.plots.mfcc"
@@ -208,38 +208,170 @@
       @if (activeTab === 'features') {
         <div class="plot-container" style="animation: fadeInUp 0.4s ease">
           <div class="plot-label">
-            Complete Feature Profile — Chroma · Spectral Contrast · ZCR · RMS
+            Interactive Feature Visualizations
           </div>
-          <img class="plot-img"
-               [src]="'data:image/png;base64,' + result.plots.features"
-               alt="Feature Visualization">
-          <div class="feature-stats">
-            <div class="stat-card">
-              <span class="stat-icon">🎵</span>
-              <span class="stat-label">ZCR (Speech Sharpness)</span>
-              <span class="stat-value">{{ result.feature_data.zcr_mean.toFixed(4) }}</span>
+
+          <!-- Feature Stats Cards Row -->
+          <div class="feature-stats-enhanced">
+            <div class="stat-card-enhanced">
+              <span class="stat-icon">🧠</span>
+              <div class="stat-info-enhanced">
+                <span class="stat-label-enhanced">MFCCs</span>
+                <span class="stat-desc-enhanced">Pronunciation & vocal tract</span>
+              </div>
+              <span class="stat-value-enhanced">40 coeff.</span>
             </div>
-            <div class="stat-card">
-              <span class="stat-icon">🔊</span>
-              <span class="stat-label">RMS Energy (Loudness)</span>
-              <span class="stat-value">{{ result.feature_data.rms_mean.toFixed(4) }}</span>
-            </div>
-            <div class="stat-card">
+            <div class="stat-card-enhanced">
               <span class="stat-icon">🎼</span>
-              <span class="stat-label">Chroma Features</span>
-              <span class="stat-value">12 bands</span>
+              <div class="stat-info-enhanced">
+                <span class="stat-label-enhanced">Chroma</span>
+                <span class="stat-desc-enhanced">Tonal characteristics</span>
+              </div>
+              <span class="stat-value-enhanced">12 bands</span>
             </div>
-            <div class="stat-card">
+            <div class="stat-card-enhanced">
               <span class="stat-icon">📊</span>
-              <span class="stat-label">Spectral Contrast</span>
-              <span class="stat-value">7 sub-bands</span>
+              <div class="stat-info-enhanced">
+                <span class="stat-label-enhanced">Spectral Contrast</span>
+                <span class="stat-desc-enhanced">Peak vs Valley energy</span>
+              </div>
+              <span class="stat-value-enhanced">7 sub-bands</span>
+            </div>
+            <div class="stat-card-enhanced">
+              <span class="stat-icon">⚡</span>
+              <div class="stat-info-enhanced">
+                <span class="stat-label-enhanced">Zero Crossing Rate</span>
+                <span class="stat-desc-enhanced">Speech sharpness</span>
+              </div>
+              <span class="stat-value-enhanced">{{ result.feature_data.zcr_mean.toFixed(4) }}</span>
+            </div>
+            <div class="stat-card-enhanced">
+              <span class="stat-icon">🔊</span>
+              <div class="stat-info-enhanced">
+                <span class="stat-label-enhanced">RMS Energy</span>
+                <span class="stat-desc-enhanced">Loudness & dynamics</span>
+              </div>
+              <span class="stat-value-enhanced">{{ result.feature_data.rms_mean.toFixed(4) }}</span>
             </div>
           </div>
-          <div class="plot-insight">
-            💡 <strong>Chroma features</strong> capture tonal characteristics unique to each dialect.
-            <strong>Spectral contrast</strong> measures energy differences between spectral peaks and valleys.
-            <strong>ZCR</strong> reflects speaking style sharpness, while <strong>RMS</strong> measures loudness dynamics.
+
+          @if (result.plots.rms || result.plots.zcr || result.plots.spectral_contrast || result.plots.chroma) {
+            <div class="feature-tabs">
+              @if (result.plots.rms) {
+                <button class="feature-tab-btn"
+                        [class.active]="activeFeatureTab === 'rms'"
+                        (click)="setFeatureTab('rms')">
+                  RMS
+                </button>
+              }
+              @if (result.plots.zcr) {
+                <button class="feature-tab-btn"
+                        [class.active]="activeFeatureTab === 'zcr'"
+                        (click)="setFeatureTab('zcr')">
+                  ZCR
+                </button>
+              }
+              @if (result.plots.spectral_contrast) {
+                <button class="feature-tab-btn"
+                        [class.active]="activeFeatureTab === 'spectral_contrast'"
+                        (click)="setFeatureTab('spectral_contrast')">
+                  Spectral Contrast
+                </button>
+              }
+              @if (result.plots.chroma) {
+                <button class="feature-tab-btn"
+                        [class.active]="activeFeatureTab === 'chroma'"
+                        (click)="setFeatureTab('chroma')">
+                  Chroma
+                </button>
+              }
+            </div>
+
+            <div class="feature-plot-panel">
+              @if (activeFeatureTab === 'rms' && result.plots.rms) {
+                <h4 class="chart-title">RMS Energy</h4>
+                <img class="feature-plot-img"
+                     [src]="'data:image/png;base64,' + result.plots.rms"
+                     alt="RMS Energy">
+              }
+
+              @if (activeFeatureTab === 'zcr' && result.plots.zcr) {
+                <h4 class="chart-title">Zero Crossing Rate</h4>
+                <img class="feature-plot-img"
+                     [src]="'data:image/png;base64,' + result.plots.zcr"
+                     alt="Zero Crossing Rate">
+              }
+
+              @if (activeFeatureTab === 'spectral_contrast' && result.plots.spectral_contrast) {
+                <h4 class="chart-title">Spectral Contrast</h4>
+                <img class="feature-plot-img"
+                     [src]="'data:image/png;base64,' + result.plots.spectral_contrast"
+                     alt="Spectral Contrast Heatmap">
+              }
+
+              @if (activeFeatureTab === 'chroma' && result.plots.chroma) {
+                <h4 class="chart-title">Chroma Features</h4>
+                <img class="feature-plot-img"
+                     [src]="'data:image/png;base64,' + result.plots.chroma"
+                     alt="Chroma Features Heatmap">
+              }
+            </div>
+          }
+
+          <!-- Charts Section -->
+          <div class="charts-grid">
+            <!-- Chroma Features Chart -->
+            @if (chromaChartData.datasets.length) {
+              <div class="chart-wrapper">
+                <h4 class="chart-title">Chroma Features (Pitch Distribution)</h4>
+                <div class="chart-container">
+                  <canvas baseChart 
+                    [type]="'bar'"
+                    [data]="chromaChartData"
+                    [options]="chromaChartOptions">
+                  </canvas>
+                </div>
+                <p class="chart-insight">Shows the distribution of energy across 12 musical pitch classes</p>
+              </div>
+            }
+
+            <!-- Spectral Contrast Chart -->
+            @if (spectralChartData.datasets.length) {
+              <div class="chart-wrapper">
+                <h4 class="chart-title">Spectral Contrast (Energy Differences)</h4>
+                <div class="chart-container">
+                  <canvas baseChart 
+                    [type]="'bar'"
+                    [data]="spectralChartData"
+                    [options]="spectralChartOptions">
+                  </canvas>
+                </div>
+                <p class="chart-insight">Represents the contrast between energy peaks and valleys in frequency bands</p>
+              </div>
+            }
+
+            <!-- Zero Crossing Rate Chart -->
+            @if (zcrChartData.datasets.length) {
+              <div class="chart-wrapper">
+                <h4 class="chart-title">Zero Crossing Rate (Voicing Characteristics)</h4>
+                <div class="chart-container">
+                  <canvas baseChart 
+                    [type]="'line'"
+                    [data]="zcrChartData"
+                    [options]="zcrChartOptions">
+                  </canvas>
+                </div>
+                <p class="chart-insight">Indicates high-frequency content and noise/voicing patterns over time</p>
+              </div>
+            }
           </div>
+
+          <!-- Fallback: Original static view -->
+          @if (!chromaChartData.datasets.length) {
+            <img class="plot-img"
+                 [src]="'data:image/png;base64,' + result.plots.features"
+                 alt="Feature Visualization">
+          }
         </div>
       }
 

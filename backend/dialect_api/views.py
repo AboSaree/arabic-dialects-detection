@@ -30,36 +30,36 @@ _model = None
 _scaler = None
 
 DIALECT_LABELS = {
-    'Lebanese':       {'code': 'LEB', 'color': '#FFFFFF', 'flag': '🇱🇧', 'display': 'Lebanese'},
-    'Moroccan':       {'code': 'MOR', 'color': '#C1272D', 'flag': '🇲🇦', 'display': 'Moroccan'},
-    'Iraqi':          {'code': 'IRA', 'color': '#CE1126', 'flag': '🇮🇶', 'display': 'Iraqi'},
-    'Egyptian':       {'code': 'EGY', 'color': '#000000', 'flag': '🇪🇬', 'display': 'Egyptian'},
+    'Egyptian Arabic':  {'code': 'EGY', 'color': '#CE1126', 'flag': '', 'display': 'Egyptian'},
+    'Gulf Arabic':      {'code': 'GLF', 'color': '#009736', 'flag': '', 'display': 'Gulf'},
+    'Levantine Arabic': {'code': 'LEV', 'color': '#007A3D', 'flag': '', 'display': 'Levantine'},
+    'Maghrebi Arabic':  {'code': 'MAG', 'color': '#C1272D', 'flag': '', 'display': 'Maghrebi'},
 }
 
 DIALECT_INFO = {
-    'Lebanese': {
-        'description': 'Lebanese Arabic is a vibrant Levantine dialect known for its musicality and heavy French influence, spoken in Lebanon.',
-        'region': 'Lebanon, Levant',
-        'speakers': '~4 million native + diaspora',
-        'characteristics': 'Musical intonation, French loanwords, distinctive vowel sounds.',
-    },
-    'Moroccan': {
-        'description': 'Moroccan Arabic (Darija) is a unique dialect heavily influenced by Berber, French, and Spanish. It\'s often considered the most distinct Arabic dialect.',
-        'region': 'Morocco, North Africa',
-        'speakers': '~35 million',
-        'characteristics': 'Rapid speech, consonant clusters, heavy Berber and French loanwords.',
-    },
-    'Iraqi': {
-        'description': 'Iraqi Arabic (Mesopotamian Arabic) is spoken across Iraq. It is known for its distinct phonological features and rich Aramaic and Persian influences.',
-        'region': 'Iraq, Mesopotamia',
-        'speakers': '~40 million',
-        'characteristics': 'Distinctive "ch" sound, heavy use of Persian and Aramaic loanwords, unique vowel shifts.',
-    },
-    'Egyptian': {
+    'Egyptian Arabic': {
         'description': 'Egyptian Arabic is the most widely spoken and understood dialect in the Arab world, largely due to the historic influence of Egyptian cinema and media.',
         'region': 'Egypt, North Africa',
         'speakers': '~100 million',
         'characteristics': 'Pronunciation of "jeem" as a hard "g", distinct vowel shortenings, and unique vocabulary.',
+    },
+    'Gulf Arabic': {
+        'description': 'Gulf Arabic is spoken across the Arabian Peninsula countries including Saudi Arabia, UAE, Kuwait, Qatar, Bahrain, and Oman. It retains many classical Arabic features.',
+        'region': 'Arabian Peninsula (Saudi Arabia, UAE, Kuwait, Qatar, Bahrain, Oman)',
+        'speakers': '~36 million',
+        'characteristics': 'Preservation of classical sounds, distinct intonation, Bedouin vocabulary, and loanwords from Persian and English.',
+    },
+    'Levantine Arabic': {
+        'description': 'Levantine Arabic is spoken in the Levant region including Syria, Lebanon, Palestine, and Jordan. It is known for its musicality and soft consonant pronunciation.',
+        'region': 'Syria, Lebanon, Palestine, Jordan',
+        'speakers': '~35 million',
+        'characteristics': 'Soft consonant sounds, musical intonation, French and Aramaic loanwords, and distinctive vowel shifts.',
+    },
+    'Maghrebi Arabic': {
+        'description': 'Maghrebi Arabic (Darija) is spoken across North Africa including Morocco, Algeria, Tunisia, and Libya. It is heavily influenced by Berber, French, and Spanish.',
+        'region': 'Morocco, Algeria, Tunisia, Libya',
+        'speakers': '~75 million',
+        'characteristics': 'Rapid speech, consonant clusters, heavy Berber and French loanwords, often mutually unintelligible with eastern dialects.',
     },
 }
 
@@ -90,10 +90,22 @@ def _fig_to_b64(fig):
 
 
 def _extract_features(y, sr):
-    """Extract the same 34 features used during training."""
-    # MFCCs (13)
-    mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
+    """Extract the same 222 features used during MADIS5 training."""
+    # Trim silence
+    y, _ = librosa.effects.trim(y, top_db=20)
+
+    # 40 MFCCs mean + std (80)
+    mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=40)
     mfccs_mean = np.mean(mfccs.T, axis=0)
+    mfccs_std  = np.std(mfccs.T, axis=0)
+
+    # Delta MFCCs mean (40)
+    delta_mfccs = librosa.feature.delta(mfccs)
+    delta_mean  = np.mean(delta_mfccs.T, axis=0)
+
+    # Delta-Delta MFCCs mean (40)
+    delta2_mfccs = librosa.feature.delta(mfccs, order=2)
+    delta2_mean  = np.mean(delta2_mfccs.T, axis=0)
 
     # Chroma (12)
     chroma = librosa.feature.chroma_stft(y=y, sr=sr)
@@ -103,6 +115,13 @@ def _extract_features(y, sr):
     contrast = librosa.feature.spectral_contrast(y=y, sr=sr)
     contrast_mean = np.mean(contrast.T, axis=0)
 
+    # Mel Spectrogram (40)
+    mel = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=40)
+    mel_mean = np.mean(librosa.power_to_db(mel).T, axis=0)
+
+    # Spectral Rolloff (1)
+    rolloff_mean = float(np.mean(librosa.feature.spectral_rolloff(y=y, sr=sr)))
+
     # Zero Crossing Rate (1)
     zcr = librosa.feature.zero_crossing_rate(y)
     zcr_mean = float(np.mean(zcr))
@@ -111,8 +130,13 @@ def _extract_features(y, sr):
     rms = librosa.feature.rms(y=y)
     rms_mean = float(np.mean(rms))
 
-    features = np.hstack([mfccs_mean, chroma_mean, contrast_mean, zcr_mean, rms_mean])
-    
+    # Total: 40+40+40+40+12+7+40+1+1+1 = 222 features
+    features = np.hstack([
+        mfccs_mean, mfccs_std, delta_mean, delta2_mean,
+        chroma_mean, contrast_mean, mel_mean,
+        [rolloff_mean, zcr_mean, rms_mean]
+    ])
+
     return features, {
         'mfccs': mfccs,
         'mfccs_mean': mfccs_mean.tolist(),
@@ -121,8 +145,10 @@ def _extract_features(y, sr):
         'contrast': contrast,
         'contrast_mean': contrast_mean.tolist(),
         'zcr': zcr,
+        'zcr_raw': (zcr[0] if zcr.ndim > 1 else zcr).tolist(),
         'zcr_mean': zcr_mean,
         'rms': rms,
+        'rms_raw': (rms[0] if rms.ndim > 1 else rms).tolist(),
         'rms_mean': rms_mean,
     }
 
@@ -166,7 +192,7 @@ def _make_mfcc_plot(mfccs, mfccs_mean, sr, dialect_color='#D4AF37'):
     cbar = fig.colorbar(img, ax=ax1)
     cbar.ax.yaxis.set_tick_params(color='#AAAAAA')
     plt.setp(cbar.ax.yaxis.get_ticklabels(), color='#AAAAAA')
-    ax1.set_title('MFCC Heatmap (13 Coefficients)', color=dialect_color,
+    ax1.set_title('MFCC Heatmap (40 Coefficients)', color=dialect_color,
                   fontsize=13, fontweight='bold')
     ax1.set_ylabel('MFCC Coefficient', color='#AAAAAA')
     ax1.tick_params(colors='#AAAAAA')
@@ -269,6 +295,55 @@ def _make_waveform_plot(y, sr, dialect_color='#D4AF37'):
     return _fig_to_b64(fig)
 
 
+def _make_feature_line_plot(values, title, ylabel, dialect_color='#D4AF37'):
+    """Generate a line plot for frame-based features such as RMS and ZCR."""
+    fig, ax = plt.subplots(figsize=(12, 4))
+    fig.patch.set_facecolor('#0D1117')
+    ax.set_facecolor('#111827')
+
+    frames = np.arange(len(values))
+    ax.plot(frames, values, color=dialect_color, linewidth=1.8)
+    ax.fill_between(frames, values, color=dialect_color, alpha=0.16)
+    ax.set_title(title, color='#F8FAFC', fontsize=13, fontweight='bold')
+    ax.set_xlabel('Frames', color='#AAAAAA')
+    ax.set_ylabel(ylabel, color='#AAAAAA')
+    ax.grid(True, color='#333333', alpha=0.45, linewidth=0.7)
+    ax.tick_params(colors='#AAAAAA')
+    for spine in ax.spines.values():
+        spine.set_edgecolor('#333333')
+
+    plt.tight_layout()
+    return _fig_to_b64(fig)
+
+
+def _make_feature_heatmap(matrix, title, ylabel, y_labels=None):
+    """Generate a heatmap for matrix features such as chroma and spectral contrast."""
+    fig, ax = plt.subplots(figsize=(12, 4.5))
+    fig.patch.set_facecolor('#0D1117')
+    ax.set_facecolor('#111827')
+
+    matrix = np.asarray(matrix)
+    img = ax.imshow(matrix, aspect='auto', origin='lower', cmap='magma', interpolation='nearest')
+    ax.set_title(title, color='#F8FAFC', fontsize=13, fontweight='bold')
+    ax.set_xlabel('Frames', color='#AAAAAA')
+    ax.set_ylabel(ylabel, color='#AAAAAA')
+    ax.tick_params(colors='#AAAAAA')
+
+    if y_labels:
+        ax.set_yticks(np.arange(len(y_labels)))
+        ax.set_yticklabels(y_labels)
+
+    for spine in ax.spines.values():
+        spine.set_edgecolor('#333333')
+
+    cbar = fig.colorbar(img, ax=ax, pad=0.02)
+    cbar.ax.tick_params(colors='#AAAAAA')
+    cbar.outline.set_edgecolor('#333333')
+
+    plt.tight_layout()
+    return _fig_to_b64(fig)
+
+
 def _save_upload_to_temp(audio_file):
     suffix = os.path.splitext(audio_file.name)[1] or '.wav'
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
@@ -308,6 +383,20 @@ def _build_analysis_payload(y, sr, filename):
     mfcc_plot_b64 = _make_mfcc_plot(raw['mfccs'], raw['mfccs_mean'], sr, dialect_color)
     features_plot_b64 = _make_features_plot(raw, display_name, dialect_color)
     waveform_b64 = _make_waveform_plot(y, sr, dialect_color)
+    rms_plot_b64 = _make_feature_line_plot(raw['rms_raw'], f'RMS Energy - {display_name} Arabic', 'Energy', dialect_color)
+    zcr_plot_b64 = _make_feature_line_plot(raw['zcr_raw'], f'Zero Crossing Rate - {display_name} Arabic', 'ZCR', dialect_color)
+    spectral_contrast_plot_b64 = _make_feature_heatmap(
+        raw['contrast'],
+        f'Spectral Contrast - {display_name} Arabic',
+        'Frequency Bands',
+        [f'Band {i + 1}' for i in range(raw['contrast'].shape[0])]
+    )
+    chroma_plot_b64 = _make_feature_heatmap(
+        raw['chroma'],
+        f'Chroma Features - {display_name} Arabic',
+        'Pitch class',
+        ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+    )
 
     info = DIALECT_INFO.get(predicted_label, {})
 
@@ -328,13 +417,19 @@ def _build_analysis_payload(y, sr, filename):
             'chroma_means': raw['chroma_mean'],
             'spectral_contrast_means': raw['contrast_mean'],
             'zcr_mean': raw['zcr_mean'],
+            'zcr_raw': raw['zcr_raw'],
             'rms_mean': raw['rms_mean'],
+            'rms_raw': raw['rms_raw'],
         },
         'plots': {
             'waveform': waveform_b64,
             'spectrogram': spectrogram_b64,
             'mfcc': mfcc_plot_b64,
             'features': features_plot_b64,
+            'rms': rms_plot_b64,
+            'zcr': zcr_plot_b64,
+            'spectral_contrast': spectral_contrast_plot_b64,
+            'chroma': chroma_plot_b64,
         },
         'dialect_info': info,
     }
@@ -424,6 +519,20 @@ def analyze_audio(request):
         mfcc_plot_b64 = _make_mfcc_plot(raw['mfccs'], raw['mfccs_mean'], sr, dialect_color)
         features_plot_b64 = _make_features_plot(raw, display_name, dialect_color)
         waveform_b64 = _make_waveform_plot(y, sr, dialect_color)
+        rms_plot_b64 = _make_feature_line_plot(raw['rms_raw'], f'RMS Energy - {display_name} Arabic', 'Energy', dialect_color)
+        zcr_plot_b64 = _make_feature_line_plot(raw['zcr_raw'], f'Zero Crossing Rate - {display_name} Arabic', 'ZCR', dialect_color)
+        spectral_contrast_plot_b64 = _make_feature_heatmap(
+            raw['contrast'],
+            f'Spectral Contrast - {display_name} Arabic',
+            'Frequency Bands',
+            [f'Band {i + 1}' for i in range(raw['contrast'].shape[0])]
+        )
+        chroma_plot_b64 = _make_feature_heatmap(
+            raw['chroma'],
+            f'Chroma Features - {display_name} Arabic',
+            'Pitch class',
+            ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+        )
 
         # Dialect info
         info = DIALECT_INFO.get(predicted_label, {})
@@ -445,13 +554,19 @@ def analyze_audio(request):
                 'chroma_means': raw['chroma_mean'],
                 'spectral_contrast_means': raw['contrast_mean'],
                 'zcr_mean': raw['zcr_mean'],
+                'zcr_raw': raw['zcr_raw'],
                 'rms_mean': raw['rms_mean'],
+                'rms_raw': raw['rms_raw'],
             },
             'plots': {
                 'waveform': waveform_b64,
                 'spectrogram': spectrogram_b64,
                 'mfcc': mfcc_plot_b64,
                 'features': features_plot_b64,
+                'rms': rms_plot_b64,
+                'zcr': zcr_plot_b64,
+                'spectral_contrast': spectral_contrast_plot_b64,
+                'chroma': chroma_plot_b64,
             },
             'dialect_info': info,
         })
