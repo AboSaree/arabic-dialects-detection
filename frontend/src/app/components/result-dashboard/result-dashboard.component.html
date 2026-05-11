@@ -118,6 +118,95 @@
     </div>
   }
 
+  <!-- ── DIALECT CONVERTER CARD ─────────────────────────────────────────── -->
+  <div class="converter-card glass-card">
+    <div class="converter-header">
+      <span class="converter-icon">🔄</span>
+      <div>
+        <h3 class="converter-title">Dialect Converter</h3>
+        <p class="converter-subtitle">
+          Translate the transcribed text into another Arabic dialect using Fanar-1-9B
+        </p>
+      </div>
+    </div>
+
+    <!-- Source text preview -->
+    <div class="source-block" *ngIf="transcribedText">
+      <span class="block-label">📝 Original ({{ result.predicted_dialect }})</span>
+      <p class="source-text" dir="rtl">{{ transcribedText }}</p>
+    </div>
+    <div class="source-block no-text" *ngIf="!transcribedText">
+      <span class="block-label">⚠️ No transcription available</span>
+      <p class="source-text" style="color: var(--text-secondary); font-size: 0.85rem;">
+        Run the Transcription tab first to get the text needed for conversion.
+      </p>
+    </div>
+
+    <!-- Target dialect selector -->
+    <div class="converter-controls">
+      <div class="select-wrapper">
+        <span class="select-label">Convert to</span>
+        <select
+          class="dialect-select"
+          [(ngModel)]="selectedTargetDialect"
+          [disabled]="conversionState === 'loading'">
+          <option value="" disabled>Choose a dialect…</option>
+          @for (d of availableDialects; track d) {
+            <option [value]="d" [disabled]="d === result.predicted_dialect">
+              {{ d }}{{ d === result.predicted_dialect ? ' (current)' : '' }}
+            </option>
+          }
+        </select>
+      </div>
+
+      <button
+        class="convert-btn"
+        [disabled]="!canConvert"
+        (click)="convertDialect()">
+        @if (conversionState === 'loading') {
+          <span class="spinner"></span> Converting…
+        } @else {
+          🔁 Convert
+        }
+      </button>
+    </div>
+
+    <!-- Error state -->
+    @if (conversionState === 'error') {
+      <div class="conv-error">
+        ⚠️ {{ conversionError }}
+      </div>
+    }
+
+    <!-- Result -->
+    @if (conversionState === 'done' && conversionResult) {
+      <div class="result-block" style="animation: fadeInUp 0.4s ease">
+        <div class="result-block-header">
+          <span class="block-label">✅ Converted ({{ conversionResult.target_dialect }})</span>
+          <button class="reset-btn" (click)="resetConversion()">✕ Clear</button>
+        </div>
+        <p class="converted-text" dir="rtl">{{ conversionResult.converted_text }}</p>
+
+        <!-- TTS Pronounce button -->
+        <div class="tts-row">
+          <button
+            class="tts-btn"
+            [disabled]="ttsState === 'loading'"
+            (click)="pronounce()">
+            @if (ttsState === 'loading') {
+              <span class="spinner"></span> Generating audio…
+            } @else if (ttsState === 'playing') {
+              🔊 Playing…
+            } @else {
+              🔊 Pronounce in {{ conversionResult.target_dialect }}
+            }
+          </button>
+          <span class="tts-note">TTS model — coming soon</span>
+        </div>
+      </div>
+    }
+  </div>
+
   <!-- ── VISUALIZATION TABS ──────────────────────────────── -->
   <div class="viz-section glass-card">
     <div class="viz-header">

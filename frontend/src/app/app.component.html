@@ -76,7 +76,8 @@
     <section class="transcription-section">
       <app-transcription
         [audioFile]="selectedFile"
-        [audioUrl]="audioUrl">
+        [audioUrl]="audioUrl"
+        (transcribed)="onTranscribed($event)">
       </app-transcription>
     </section>
   }
@@ -117,7 +118,10 @@
   <!-- Result Dashboard -->
   @if (result && !isLoading) {
     <section id="result-section" class="result-section">
-      <app-result-dashboard [result]="result" (reset)="onReset()">
+      <app-result-dashboard
+        [result]="result"
+        [transcribedText]="transcribedText"
+        (reset)="onReset()">
       </app-result-dashboard>
     </section>
   }

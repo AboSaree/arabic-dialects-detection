@@ -63,3 +63,10 @@ export interface TranscriptionResult {
   words: TranscriptionWord[];
   full_text: string;
 }
+
+// Dialect conversion (Fanar-1-9B-Instruct)
+export interface DialectConversionResult {
+  converted_text: string;
+  source_dialect: string;
+  target_dialect: string;
+}

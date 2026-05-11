@@ -1,19 +1,17 @@
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NgChartsModule } from 'ng2-charts';
-import { ChartConfiguration, TooltipItem } from 'chart.js';
-import 'chart.js/auto';
 import { AnalysisResult } from '../../models/analysis-result.interface';
 
 @Component({
   selector: 'app-result-dashboard',
   standalone: true,
-  imports: [CommonModule, NgChartsModule],
+  imports: [CommonModule],
   templateUrl: './result-dashboard.component.html',
   styleUrls: ['./result-dashboard.component.css']
 })
 export class ResultDashboardComponent implements OnInit {
   @Input() result!: AnalysisResult;
+  @Input() transcribedText: string = '';   // full_text from TranscriptionComponent
   @Output() reset = new EventEmitter<void>();
 
   activeTab: 'spectrogram' | 'mfcc' | 'features' | 'waveform' = 'spectrogram';
@@ -21,21 +19,14 @@ export class ResultDashboardComponent implements OnInit {
   probabilityEntries: { dialect: string; value: number; color: string }[] = [];
   animatedConfidence = 0;
 
-  // Chart data
-  zcrChartData: ChartConfiguration['data'] = { labels: [], datasets: [] };
-  spectralChartData: ChartConfiguration['data'] = { labels: [], datasets: [] };
-  chromaChartData: ChartConfiguration['data'] = { labels: [], datasets: [] };
-  
-  zcrChartOptions: ChartConfiguration['options'] = {};
-  spectralChartOptions: ChartConfiguration['options'] = {};
-  chromaChartOptions: ChartConfiguration['options'] = {};
-
   private dialectColors: Record<string, string> = {
     'Egyptian Arabic':  '#CE1126',
     'Gulf Arabic':      '#009736',
     'Levantine Arabic': '#007A3D',
     'Maghrebi Arabic':  '#C1272D',
   };
+
+  constructor(private dialectService: DialectService) {}
 
   ngOnInit(): void {
     // Build sorted probability entries
@@ -201,6 +192,63 @@ export class ResultDashboardComponent implements OnInit {
     const c = this.getCircumference();
     return c - (this.animatedConfidence / 100) * c;
   }
+
+  // ── Dialect Conversion ─────────────────────────────────────────────────────
+
+  convertDialect(): void {
+    const text = this.transcribedText || '';
+    if (!text.trim() || !this.selectedTargetDialect) return;
+
+    this.conversionState  = 'loading';
+    this.conversionResult = null;
+    this.conversionError  = '';
+    this.ttsState         = 'idle';
+
+    this.dialectService.convertDialect(
+      text,
+      this.result.predicted_dialect,
+      this.selectedTargetDialect
+    ).subscribe({
+      next: (res) => {
+        this.conversionResult = res;
+        this.conversionState  = 'done';
+      },
+      error: (err) => {
+        this.conversionError = err.message || 'Conversion failed.';
+        this.conversionState = 'error';
+      }
+    });
+  }
+
+  /** TTS placeholder — wire to your chosen model here */
+  pronounce(): void {
+    if (!this.conversionResult?.converted_text) return;
+    // TODO: Call your TTS endpoint, e.g.:
+    //   this.dialectService.synthesize(this.conversionResult.converted_text, this.selectedTargetDialect)
+    //     .subscribe(audioBlob => { ... play blob ... });
+    this.ttsState = 'loading';
+    setTimeout(() => {
+      // Simulated response — remove this block once TTS is wired
+      alert('TTS not connected yet.\n\nText to pronounce:\n' + this.conversionResult!.converted_text);
+      this.ttsState = 'idle';
+    }, 500);
+  }
+
+  resetConversion(): void {
+    this.conversionState     = 'idle';
+    this.conversionResult    = null;
+    this.conversionError     = '';
+    this.selectedTargetDialect = '';
+    this.ttsState            = 'idle';
+  }
+
+  get canConvert(): boolean {
+    return !!this.selectedTargetDialect &&
+           !!this.transcribedText.trim() &&
+           this.conversionState !== 'loading';
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
   formatDuration(seconds: number): string {
     const m = Math.floor(seconds / 60);
