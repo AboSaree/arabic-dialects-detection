@@ -1,11 +1,16 @@
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AnalysisResult } from '../../models/analysis-result.interface';
+import { FormsModule } from '@angular/forms';
+import { NgChartsModule } from 'ng2-charts';
+import { ChartConfiguration, TooltipItem } from 'chart.js';
+import 'chart.js/auto';
+import { AnalysisResult, DialectConversionResult } from '../../models/analysis-result.interface';
+import { DialectService } from '../../services/dialect.service';
 
 @Component({
   selector: 'app-result-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule, NgChartsModule],
   templateUrl: './result-dashboard.component.html',
   styleUrls: ['./result-dashboard.component.css']
 })
@@ -18,6 +23,21 @@ export class ResultDashboardComponent implements OnInit {
   activeFeatureTab: FeaturePlotTab = 'rms';
   probabilityEntries: { dialect: string; value: number; color: string }[] = [];
   animatedConfidence = 0;
+  availableDialects = ['Egyptian', 'Gulf', 'Levantine', 'Maghrebi'];
+  selectedTargetDialect = '';
+  conversionState: 'idle' | 'loading' | 'done' | 'error' = 'idle';
+  conversionResult: DialectConversionResult | null = null;
+  conversionError = '';
+  ttsState: 'idle' | 'loading' | 'playing' = 'idle';
+
+  // Chart data
+  zcrChartData: ChartConfiguration['data'] = { labels: [], datasets: [] };
+  spectralChartData: ChartConfiguration['data'] = { labels: [], datasets: [] };
+  chromaChartData: ChartConfiguration['data'] = { labels: [], datasets: [] };
+
+  zcrChartOptions: ChartConfiguration['options'] = {};
+  spectralChartOptions: ChartConfiguration['options'] = {};
+  chromaChartOptions: ChartConfiguration['options'] = {};
 
   private dialectColors: Record<string, string> = {
     'Egyptian Arabic':  '#CE1126',
