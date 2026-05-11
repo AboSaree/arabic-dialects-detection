@@ -143,6 +143,39 @@
   line-height: 1.5;
 }
 
+/* Toggle pill buttons for mix method */
+.mix-toggle {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.mix-pill {
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.18s ease;
+}
+
+.mix-pill:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+}
+
+.mix-pill.active {
+  background: linear-gradient(180deg, var(--gold), #b8872a);
+  border-color: var(--border-gold);
+  color: #0D1117;
+  box-shadow: var(--glow-gold);
+}
+
 .weights-row {
   display: flex;
   align-items: center;

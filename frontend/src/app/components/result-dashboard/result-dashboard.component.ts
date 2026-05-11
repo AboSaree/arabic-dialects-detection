@@ -240,18 +240,44 @@ export class ResultDashboardComponent implements OnInit {
     });
   }
 
-  /** TTS placeholder — wire to your chosen model here */
+  /** TTS using ElevenLabs — synthesize and play converted text */
   pronounce(): void {
     if (!this.conversionResult?.converted_text) return;
-    // TODO: Call your TTS endpoint, e.g.:
-    //   this.dialectService.synthesize(this.conversionResult.converted_text, this.selectedTargetDialect)
-    //     .subscribe(audioBlob => { ... play blob ... });
+
     this.ttsState = 'loading';
-    setTimeout(() => {
-      // Simulated response — remove this block once TTS is wired
-      alert('TTS not connected yet.\n\nText to pronounce:\n' + this.conversionResult!.converted_text);
-      this.ttsState = 'idle';
-    }, 500);
+
+    this.dialectService.synthesize(
+      this.conversionResult.converted_text,
+      this.selectedTargetDialect
+    ).subscribe({
+      next: (audioBlob) => {
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+
+        this.ttsState = 'playing';
+
+        audio.onended = () => {
+          this.ttsState = 'idle';
+          URL.revokeObjectURL(audioUrl);
+        };
+
+        audio.onerror = () => {
+          console.error('Audio playback error');
+          this.ttsState = 'idle';
+          URL.revokeObjectURL(audioUrl);
+        };
+
+        audio.play().catch((err) => {
+          console.error('Failed to play audio:', err);
+          this.ttsState = 'idle';
+          URL.revokeObjectURL(audioUrl);
+        });
+      },
+      error: (err) => {
+        console.error('TTS synthesis failed:', err);
+        this.ttsState = 'idle';
+      }
+    });
   }
 
   resetConversion(): void {

@@ -106,7 +106,10 @@ if _env_file.exists():
 HF_TOKEN = os.environ.get('HF_TOKEN', '')
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
-
+ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY', '')
+DEEPGRAM_API_KEY = os.environ.get('DEEPGRAM_API_KEY', '')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+DEEPGRAM_API_KEY = os.environ.get('DEEPGRAM_API_KEY', '')
 # File upload settings
 DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB

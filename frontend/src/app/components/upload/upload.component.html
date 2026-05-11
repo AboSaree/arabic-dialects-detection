@@ -170,6 +170,26 @@
       </div>
 
       <div class="mix-controls">
+        <div class="mix-method-wrapper">
+          <div class="mix-toggle" role="tablist" aria-label="Mix method">
+            <button type="button"
+                    class="mix-pill"
+                    [class.active]="mixMethod === 'weighted'"
+                    (click)="mixMethod = 'weighted'">
+              Weighted Blend
+            </button>
+            <button type="button"
+                    class="mix-pill"
+                    [class.active]="mixMethod === 'splice'"
+                    (click)="mixMethod = 'splice'">
+              Concatenate
+            </button>
+          </div>
+          <div class="mix-method-desc">
+            <span *ngIf="mixMethod === 'weighted'">Audio 1 and Audio 2 are mixed simultaneously throughout</span>
+            <span *ngIf="mixMethod === 'splice'">Audio 1 fills the first {{ weightA }}% of the duration, Audio 2 fills the rest</span>
+          </div>
+        </div>
         <div class="weights-row">
           <div class="weight-col">
             <div class="weight-label">

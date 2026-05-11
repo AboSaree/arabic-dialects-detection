@@ -65,6 +65,16 @@ export class DialectService {
       .pipe(catchError(this.handleError));
   }
 
+  /**
+   * Synthesize Arabic text to speech using ElevenLabs API.
+   * Returns audio as a Blob.
+   */
+  synthesize(text: string, dialect: string): Observable<Blob> {
+    return this.http
+      .post(`${this.apiUrl}/tts/`, { text, dialect }, { responseType: 'blob' })
+      .pipe(catchError(this.handleError));
+  }
+
   private handleError(error: HttpErrorResponse): Observable<never> {
     let message = 'An unexpected error occurred.';
     if (error.error?.error) {

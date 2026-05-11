@@ -668,21 +668,7 @@ def analyze_mixed_audio(request):
         )
 
 
-# ── Whisper Transcription ──────────────────────────────────────────────────────
-_whisper_pipe = None
 
-def _load_whisper():
-    global _whisper_pipe
-    if _whisper_pipe is None:
-        from transformers import pipeline as hf_pipeline
-        print("[DialectAPI] Loading Whisper model (ayoubkirouane/whisper-small-ar)...")
-        _whisper_pipe = hf_pipeline(
-            "automatic-speech-recognition",
-            model="ayoubkirouane/whisper-small-ar",
-            return_timestamps="word",
-        )
-        print("[DialectAPI] Whisper model loaded.")
-    return _whisper_pipe
 
 
 
@@ -700,8 +686,7 @@ _DIALECT_AR = {
 @api_view(['POST'])
 def convert_dialect(request):
     """
-    Convert Arabic text from one dialect to another using
-    Groq API (llama-3.3-70b-versatile) — free tier.
+    Convert Arabic text from one dialect to another using Google Gemini 2.5 Flash.
 
     Body (JSON):
         text           - Arabic text to convert
@@ -981,12 +966,10 @@ def convert_dialect(request):
 @parser_classes([MultiPartParser, FormParser])
 def transcribe_audio(request):
     """
-    Transcribe an uploaded Arabic audio file using Whisper.
-
-    Audio is decoded with librosa (avoids torchcodec / FFmpeg dependency on Windows).
+    Transcribe an uploaded Arabic audio file using Deepgram Nova-3.
 
     Expected: multipart/form-data with 'audio' file field
-    Returns:  JSON  { words: [{word, start, end}], full_text: str }
+    Returns:  JSON  { words: [], full_text: str, text: str }
     """
     if 'audio' not in request.FILES:
         return Response(
@@ -996,45 +979,125 @@ def transcribe_audio(request):
 
     audio_file = request.FILES['audio']
 
+    api_key = getattr(settings, 'DEEPGRAM_API_KEY', '').strip()
+    if not api_key:
+        return Response(
+            {'error': 'DEEPGRAM_API_KEY is not set. Add it to backend/.env'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
+
     try:
-        pipe = _load_whisper()
+        import requests
 
-        # Save upload to a temp file so librosa can read it
-        suffix = os.path.splitext(audio_file.name)[1] or '.wav'
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            for chunk in audio_file.chunks():
-                tmp.write(chunk)
-            tmp_path = tmp.name
+        headers = {
+            'Authorization': f'Token {api_key}',
+            'Content-Type': audio_file.content_type or 'audio/wav',
+        }
 
-        try:
-            # Decode with librosa — no FFmpeg DLL needed on Windows
-            # Whisper expects 16 kHz mono float32 numpy array
-            audio_array, _ = librosa.load(tmp_path, sr=16000, mono=True)
-        finally:
-            os.unlink(tmp_path)
+        audio_bytes = b''.join(chunk for chunk in audio_file.chunks())
+        resp = requests.post(
+            'https://api.deepgram.com/v1/listen?model=nova-3&language=ar',
+            headers=headers,
+            data=audio_bytes,
+            timeout=60,
+        )
 
-        # Pass numpy array + sampling_rate dict directly to the pipeline.
-        # This completely bypasses torchcodec / soundfile file-path loading.
-        result = pipe({"array": audio_array, "sampling_rate": 16000})
+        if resp.status_code == 401:
+            return Response(
+                {'error': 'Invalid Deepgram API key. Check DEEPGRAM_API_KEY in backend/.env'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        if resp.status_code == 429:
+            return Response(
+                {'error': 'Deepgram rate limit reached. Please wait a moment and try again.'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
 
-        # result['chunks'] = [{'text': '...', 'timestamp': (start, end)}, ...]
-        chunks = result.get('chunks', [])
-        words = []
-        for chunk in chunks:
-            ts = chunk.get('timestamp', (None, None))
-            words.append({
-                'word':  chunk.get('text', '').strip(),
-                'start': ts[0] if ts[0] is not None else 0,
-                'end':   ts[1] if ts[1] is not None else 0,
-            })
+        resp.raise_for_status()
 
-        full_text = result.get('text', '').strip()
+        transcript = resp.json()['results']['channels'][0]['alternatives'][0]['transcript']
 
-        return Response({'words': words, 'full_text': full_text})
+        if not transcript:
+            return Response({'error': 'Transcription failed: empty response from Deepgram.'}, status=status.HTTP_502_BAD_GATEWAY)
 
+        return Response({'words': [], 'full_text': transcript, 'text': transcript})
+
+    except requests.RequestException as e:
+        traceback.print_exc()
+        return Response({'error': f'Transcription failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except Exception as e:
         traceback.print_exc()
+        return Response({'error': f'Transcription failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ── Dialect-to-voice mapping for ElevenLabs TTS ────────────────────────────────
+ELEVENLABS_VOICE_MAP = {
+    'Egyptian':  'EXAVITQu4vr4xnSDxMaL',
+    'Gulf':      'EXAVITQu4vr4xnSDxMaL',
+    'Levantine': 'EXAVITQu4vr4xnSDxMaL',
+    'Maghrebi':  'EXAVITQu4vr4xnSDxMaL',
+}
+
+
+@api_view(['POST'])
+def text_to_speech(request):
+    """
+    Convert Arabic text to speech using ElevenLabs API.
+
+    Body (JSON):
+        text   - Arabic text to synthesize
+        dialect - Dialect name (Egyptian, Gulf, Levantine, Maghrebi)
+
+    Returns:
+        Audio stream (audio/mpeg)
+    """
+    from elevenlabs.client import ElevenLabs
+    from django.http import HttpResponse
+
+    text = request.data.get('text', '').strip()
+    dialect = request.data.get('dialect', '').strip()
+
+    if not text:
+        return Response({'error': 'No text provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    api_key = getattr(settings, 'ELEVENLABS_API_KEY', '').strip()
+    if not api_key:
         return Response(
-            {'error': f'Transcription failed: {str(e)}'},
+            {'error': 'ELEVENLABS_API_KEY is not set. Add it to backend/.env'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
+
+    # Map dialect to voice ID (fallback to default if dialect not found)
+    voice_id = ELEVENLABS_VOICE_MAP.get(dialect, 'EXAVITQu4vr4xnSDxMaL')
+
+    try:
+        client = ElevenLabs(api_key=api_key)
+
+        audio_stream = client.text_to_speech.convert(
+            voice_id=voice_id,
+            text=text,
+            model_id='eleven_multilingual_v2'
+        )
+
+        # Convert generator to bytes
+        audio_bytes = b''.join(audio_stream)
+
+        return HttpResponse(audio_bytes, content_type='audio/mpeg')
+
+    except Exception as e:
+        err_str = str(e)
+        traceback.print_exc()
+        if '401' in err_str or 'invalid_api_key' in err_str.lower():
+            return Response(
+                {'error': 'Invalid ElevenLabs API key. Check ELEVENLABS_API_KEY in backend/.env'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        if '429' in err_str:
+            return Response(
+                {'error': 'ElevenLabs rate limit reached. Please wait a moment and try again.'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+        return Response(
+            {'error': f'Text-to-speech failed: {err_str}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
