@@ -1,0 +1,11 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pkl
+*.pth
+
+# Django
+db.sqlite3

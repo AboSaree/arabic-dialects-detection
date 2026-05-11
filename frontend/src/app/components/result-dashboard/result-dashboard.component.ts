@@ -1,21 +1,32 @@
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AnalysisResult } from '../../models/analysis-result.interface';
+import { FormsModule } from '@angular/forms';
+import { AnalysisResult, DialectConversionResult } from '../../models/analysis-result.interface';
+import { DialectService } from '../../services/dialect.service';
 
 @Component({
   selector: 'app-result-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './result-dashboard.component.html',
   styleUrls: ['./result-dashboard.component.css']
 })
 export class ResultDashboardComponent implements OnInit {
   @Input() result!: AnalysisResult;
+  @Input() transcribedText: string = '';   // full_text from TranscriptionComponent
   @Output() reset = new EventEmitter<void>();
 
   activeTab: 'spectrogram' | 'mfcc' | 'features' | 'waveform' = 'spectrogram';
   probabilityEntries: { dialect: string; value: number; color: string }[] = [];
   animatedConfidence = 0;
+
+  // ── Dialect Converter state ────────────────────────────────────────────────
+  readonly availableDialects = ['Egyptian', 'Moroccan', 'Iraqi', 'Lebanese', 'Gulf', 'MSA'];
+  selectedTargetDialect = '';
+  conversionState: 'idle' | 'loading' | 'done' | 'error' = 'idle';
+  conversionResult: DialectConversionResult | null = null;
+  conversionError = '';
+  ttsState: 'idle' | 'loading' | 'playing' = 'idle';   // TTS placeholder
 
   private dialectColors: Record<string, string> = {
     'Lebanese':  '#FFFFFF',
@@ -23,6 +34,8 @@ export class ResultDashboardComponent implements OnInit {
     'Iraqi':     '#CE1126',
     'Egyptian':  '#000000',
   };
+
+  constructor(private dialectService: DialectService) {}
 
   ngOnInit(): void {
     // Build sorted probability entries
@@ -68,6 +81,63 @@ export class ResultDashboardComponent implements OnInit {
     const c = this.getCircumference();
     return c - (this.animatedConfidence / 100) * c;
   }
+
+  // ── Dialect Conversion ─────────────────────────────────────────────────────
+
+  convertDialect(): void {
+    const text = this.transcribedText || '';
+    if (!text.trim() || !this.selectedTargetDialect) return;
+
+    this.conversionState  = 'loading';
+    this.conversionResult = null;
+    this.conversionError  = '';
+    this.ttsState         = 'idle';
+
+    this.dialectService.convertDialect(
+      text,
+      this.result.predicted_dialect,
+      this.selectedTargetDialect
+    ).subscribe({
+      next: (res) => {
+        this.conversionResult = res;
+        this.conversionState  = 'done';
+      },
+      error: (err) => {
+        this.conversionError = err.message || 'Conversion failed.';
+        this.conversionState = 'error';
+      }
+    });
+  }
+
+  /** TTS placeholder — wire to your chosen model here */
+  pronounce(): void {
+    if (!this.conversionResult?.converted_text) return;
+    // TODO: Call your TTS endpoint, e.g.:
+    //   this.dialectService.synthesize(this.conversionResult.converted_text, this.selectedTargetDialect)
+    //     .subscribe(audioBlob => { ... play blob ... });
+    this.ttsState = 'loading';
+    setTimeout(() => {
+      // Simulated response — remove this block once TTS is wired
+      alert('TTS not connected yet.\n\nText to pronounce:\n' + this.conversionResult!.converted_text);
+      this.ttsState = 'idle';
+    }, 500);
+  }
+
+  resetConversion(): void {
+    this.conversionState     = 'idle';
+    this.conversionResult    = null;
+    this.conversionError     = '';
+    this.selectedTargetDialect = '';
+    this.ttsState            = 'idle';
+  }
+
+  get canConvert(): boolean {
+    return !!this.selectedTargetDialect &&
+           !!this.transcribedText.trim() &&
+           this.conversionState !== 'loading';
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
   formatDuration(seconds: number): string {
     const m = Math.floor(seconds / 60);

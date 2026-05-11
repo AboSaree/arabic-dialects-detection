@@ -1,5 +1,5 @@
 import {
-  Component, Input, OnChanges, OnDestroy, SimpleChanges,
+  Component, Input, Output, EventEmitter, OnChanges, OnDestroy, SimpleChanges,
   ViewChild, ElementRef, NgZone, ChangeDetectorRef
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -21,6 +21,8 @@ export class TranscriptionComponent implements OnChanges, OnDestroy {
   @Input() audioFile: File | null = null;
   /** Blob URL for the <audio> element — provided by the upload component */
   @Input() audioUrl: string | null = null;
+  /** Emits the full transcribed text once ready — consumed by result-dashboard */
+  @Output() transcribed = new EventEmitter<string>();
 
   @ViewChild('audioRef') audioRef!: ElementRef<HTMLAudioElement>;
 
@@ -67,6 +69,7 @@ export class TranscriptionComponent implements OnChanges, OnDestroy {
         this.words    = res.words;
         this.fullText = res.full_text;
         this.state    = 'ready';
+        this.transcribed.emit(res.full_text);   // ← bubble up to app component
         this.cdr.detectChanges();
       },
       error: (err) => {

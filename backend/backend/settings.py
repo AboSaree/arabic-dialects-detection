@@ -93,6 +93,20 @@ REST_FRAMEWORK = {
 MODEL_PATH = BASE_DIR.parent / 'dialect_model.pkl'
 SCALER_PATH = BASE_DIR.parent / 'scaler.pkl'
 
+# ── HuggingFace token (for Fanar dialect conversion) ──────────────────────────
+# Reads from backend/.env first, then falls back to system env HF_TOKEN.
+_env_file = BASE_DIR / '.env'
+if _env_file.exists():
+    for _line in _env_file.read_text().splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith('#') and '=' in _line:
+            _k, _v = _line.split('=', 1)
+            os.environ.setdefault(_k.strip(), _v.strip())
+
+HF_TOKEN = os.environ.get('HF_TOKEN', '')
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+
 # File upload settings
 DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB

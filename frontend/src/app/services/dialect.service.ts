@@ -2,7 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { AnalysisResult, TranscriptionResult } from '../models/analysis-result.interface';
+import {
+  AnalysisResult,
+  TranscriptionResult,
+  DialectConversionResult,
+} from '../models/analysis-result.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -41,6 +45,24 @@ export class DialectService {
 
   healthCheck(): Observable<any> {
     return this.http.get(`${this.apiUrl}/health/`).pipe(catchError(this.handleError));
+  }
+
+  /**
+   * Convert Arabic text to another dialect using Fanar-1-9B-Instruct.
+   * Requires HF_TOKEN to be set in the Django environment.
+   */
+  convertDialect(
+    text: string,
+    sourceDialect: string,
+    targetDialect: string
+  ): Observable<DialectConversionResult> {
+    return this.http
+      .post<DialectConversionResult>(`${this.apiUrl}/convert-dialect/`, {
+        text,
+        source_dialect: sourceDialect,
+        target_dialect: targetDialect,
+      })
+      .pipe(catchError(this.handleError));
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {

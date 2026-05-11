@@ -570,6 +570,298 @@ def _load_whisper():
     return _whisper_pipe
 
 
+
+# ── Dialect name → Arabic label used in prompts ───────────────────────────────
+_DIALECT_AR = {
+    'Egyptian':  'المصري',
+    'Moroccan':  'المغربي (الدارجة)',
+    'Iraqi':     'العراقي',
+    'Lebanese':  'اللبناني',
+    'Gulf':      'الخليجي',
+    'MSA':       'الفصحى (اللغة العربية الفصحى)',
+}
+
+
+@api_view(['POST'])
+def convert_dialect(request):
+    """
+    Convert Arabic text from one dialect to another using
+    Groq API (llama-3.3-70b-versatile) — free tier.
+
+    Body (JSON):
+        text           - Arabic text to convert
+        source_dialect - e.g. "Egyptian"
+        target_dialect - e.g. "Moroccan"
+
+    Returns:
+        { converted_text: str, source_dialect: str, target_dialect: str }
+    """
+    from groq import Groq
+
+    text           = request.data.get('text', '').strip()
+    source_dialect = request.data.get('source_dialect', '').strip()
+    target_dialect = request.data.get('target_dialect', '').strip()
+
+    if not text:
+        return Response({'error': 'No text provided.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not target_dialect:
+        return Response({'error': 'target_dialect is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    api_key = getattr(settings, 'GROQ_API_KEY', '').strip()
+    if not api_key:
+        return Response(
+            {'error': 'GROQ_API_KEY is not set. Add it to backend/.env'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
+
+    src_ar = _DIALECT_AR.get(source_dialect, source_dialect) if source_dialect else 'غير محدد'
+    tgt_ar = _DIALECT_AR.get(target_dialect, target_dialect)
+
+    system_prompt = (
+        "أنت خبير متخصص في اللهجات العربية. مهمتك الوحيدة هي تحويل النصوص العربية من لهجة إلى أخرى.\n"
+        "قواعد صارمة يجب الالتزام بها:\n"
+        "1. اكتب النص المحوَّل باللغة العربية فقط — لا إنجليزية أبداً.\n"
+        "2. حافظ على المعنى الأصلي تماماً مع تغيير المفردات والتعبيرات لتناسب اللهجة المطلوبة.\n"
+        "3. لا تضف أي تفسير أو تعليق أو مقدمة — النص المحوَّل فقط.\n"
+        "4. إذا لم يكن للكلمة مقابل في اللهجة المطلوبة، استخدم الأقرب إليها."
+    )
+
+    user_prompt = (
+        f"حوِّل النص التالي من اللهجة {src_ar} إلى اللهجة {tgt_ar}.\n"
+        f"اكتب النص المحوَّل فقط بدون أي مقدمة أو تعليق.\n\n"
+        f"النص ({src_ar}):\n{text}\n\n"
+        f"النص بعد التحويل إلى {tgt_ar}:"
+    )
+
+    try:
+        client = Groq(api_key=api_key)
+
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": user_prompt},
+            ],
+            max_tokens=1024,
+            temperature=0.2,
+        )
+
+        converted_text = completion.choices[0].message.content.strip()
+
+        return Response({
+            "converted_text":  converted_text,
+            "source_dialect":  source_dialect,
+            "target_dialect":  target_dialect,
+        })
+
+    except Exception as e:
+        err_str = str(e)
+        traceback.print_exc()
+        if '401' in err_str or 'invalid_api_key' in err_str.lower():
+            return Response(
+                {'error': 'Invalid Groq API key. Check GROQ_API_KEY in backend/.env'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        if '429' in err_str:
+            return Response(
+                {'error': 'Groq rate limit reached. Please wait a moment and try again.'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+        return Response(
+            {'error': f'Dialect conversion failed: {err_str}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+    """
+    Convert Arabic text from one dialect to another using Claude claude-sonnet-4-20250514.
+
+    Body (JSON):
+        text           - Arabic text to convert
+        source_dialect - e.g. "Egyptian"
+        target_dialect - e.g. "Moroccan"
+
+    Returns:
+        { converted_text: str, source_dialect: str, target_dialect: str }
+    """
+    import anthropic
+
+    text           = request.data.get('text', '').strip()
+    source_dialect = request.data.get('source_dialect', '').strip()
+    target_dialect = request.data.get('target_dialect', '').strip()
+
+    if not text:
+        return Response({'error': 'No text provided.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not target_dialect:
+        return Response({'error': 'target_dialect is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    api_key = getattr(settings, 'ANTHROPIC_API_KEY', '').strip()
+    if not api_key:
+        return Response(
+            {'error': 'ANTHROPIC_API_KEY is not set. Add it to backend/.env'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
+
+    src_ar = _DIALECT_AR.get(source_dialect, source_dialect) if source_dialect else 'غير محدد'
+    tgt_ar = _DIALECT_AR.get(target_dialect, target_dialect)
+
+    system_prompt = (
+        "أنت خبير متخصص في اللهجات العربية. مهمتك الوحيدة هي تحويل النصوص العربية من لهجة إلى أخرى.\n"
+        "قواعد صارمة يجب الالتزام بها:\n"
+        "1. اكتب النص المحوَّل باللغة العربية فقط — لا إنجليزية أبداً.\n"
+        "2. حافظ على المعنى الأصلي تماماً مع تغيير المفردات والتعبيرات لتناسب اللهجة المطلوبة.\n"
+        "3. لا تضف أي تفسير أو تعليق أو مقدمة — النص المحوَّل فقط.\n"
+        "4. إذا لم يكن للكلمة مقابل في اللهجة المطلوبة، استخدم الأقرب إليها."
+    )
+
+    user_prompt = (
+        f"حوِّل النص التالي من اللهجة {src_ar} إلى اللهجة {tgt_ar}.\n"
+        f"اكتب النص المحوَّل فقط بدون أي مقدمة أو تعليق.\n\n"
+        f"النص ({src_ar}):\n{text}\n\n"
+        f"النص بعد التحويل إلى {tgt_ar}:"
+    )
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1024,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_prompt}]
+        )
+
+        converted_text = message.content[0].text.strip()
+
+        return Response({
+            "converted_text":  converted_text,
+            "source_dialect":  source_dialect,
+            "target_dialect":  target_dialect,
+        })
+
+    except anthropic.AuthenticationError:
+        return Response(
+            {'error': 'Invalid Anthropic API key. Check ANTHROPIC_API_KEY in backend/.env'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    except anthropic.RateLimitError:
+        return Response(
+            {'error': 'Anthropic rate limit reached. Please wait and try again.'},
+            status=status.HTTP_429_TOO_MANY_REQUESTS
+        )
+    except Exception as e:
+        traceback.print_exc()
+        return Response(
+            {'error': f'Dialect conversion failed: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+    """
+    Convert Arabic text from one dialect to another using Fanar-1-9B-Instruct
+    via the HuggingFace Inference Router (OpenAI-compatible endpoint).
+
+    Body (JSON):
+        text          - Arabic text to convert
+        source_dialect - e.g. "Egyptian"
+        target_dialect - e.g. "Moroccan"
+
+    Returns:
+        { converted_text: str, source_dialect: str, target_dialect: str }
+    """
+    text           = request.data.get('text', '').strip()
+    source_dialect = request.data.get('source_dialect', '').strip()
+    target_dialect = request.data.get('target_dialect', '').strip()
+
+    if not text:
+        return Response({'error': 'No text provided.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not target_dialect:
+        return Response({'error': 'target_dialect is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    hf_token = getattr(settings, 'HF_TOKEN', '').strip()
+    if not hf_token:
+        return Response(
+            {'error': 'HF_TOKEN environment variable is not set. '
+                      'Please add your Hugging Face token to the backend environment.'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
+
+    src_ar = _DIALECT_AR.get(source_dialect, source_dialect) if source_dialect else 'غير محدد'
+    tgt_ar = _DIALECT_AR.get(target_dialect, target_dialect)
+
+    system_prompt = (
+        "You are an expert Arabic dialect translator. "
+        "Your ONLY task is to rewrite Arabic text from one dialect into another dialect. "
+        "STRICT RULES you must never break:\n"
+        "1. Output ONLY Arabic text. Never write English or any other language.\n"
+        "2. Do NOT translate to English. Do NOT explain. Do NOT add comments.\n"
+        "3. Keep the exact same meaning but change vocabulary and expressions to match the target dialect.\n"
+        "4. If you are unsure about a word, keep the closest Arabic equivalent in the target dialect.\n"
+        "5. Your entire response must be Arabic script only."
+    )
+
+    user_prompt = (
+        f"Convert the following Arabic text from {source_dialect} dialect to {target_dialect} dialect.\n"
+        f"Output ONLY the converted Arabic text. No English. No explanation.\n\n"
+        f"Input ({source_dialect}):\n{text}\n\n"
+        f"Output ({target_dialect} Arabic):"
+    )
+
+    try:
+        from huggingface_hub import InferenceClient
+
+        client = InferenceClient(
+            provider="featherless-ai",   # Fanar is hosted here via HF router
+            api_key=hf_token,
+        )
+
+        completion = client.chat.completions.create(
+            model="QCRI/Fanar-1-9B-Instruct",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": user_prompt},
+            ],
+            max_tokens=1024,
+            temperature=0.1,
+        )
+
+        converted_text = completion.choices[0].message.content.strip()
+
+        # Sanity check: if less than 30% of letters are Arabic script, the model hallucinated
+        arabic_chars = sum(1 for c in converted_text if '\u0600' <= c <= '\u06FF')
+        total_letters = sum(1 for c in converted_text if c.isalpha())
+        if total_letters > 0 and arabic_chars / total_letters < 0.3:
+            return Response(
+                {'error': 'Model returned non-Arabic output. Please try again — this is a known '
+                          'occasional issue with the Fanar model on long texts.'},
+                status=status.HTTP_502_BAD_GATEWAY
+            )
+
+        return Response({
+            "converted_text":  converted_text,
+            "source_dialect":  source_dialect,
+            "target_dialect":  target_dialect,
+        })
+
+    except Exception as e:
+        err_str = str(e)
+        traceback.print_exc()
+        if '401' in err_str or 'Unauthorized' in err_str:
+            return Response(
+                {'error': 'Invalid HuggingFace token. Check HF_TOKEN in backend/.env'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        if '429' in err_str:
+            return Response(
+                {'error': 'HuggingFace rate limit reached. Please wait and try again.'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+        return Response(
+            {'error': f'Dialect conversion failed: {err_str}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])
 def transcribe_audio(request):

@@ -21,6 +21,7 @@ export class AppComponent implements OnInit {
   backendOnline = false;
   selectedFile: File | null = null;
   audioUrl: string | null = null;
+  transcribedText: string = '';          // ← flows from transcription → dashboard
   private analysisSubscription: Subscription | null = null;
 
   constructor(private dialectService: DialectService) {}
@@ -81,6 +82,10 @@ export class AppComponent implements OnInit {
     });
   }
 
+  onTranscribed(text: string): void {
+    this.transcribedText = text;
+  }
+
   onReset(): void {
     this.analysisSubscription?.unsubscribe();
     this.analysisSubscription = null;
@@ -88,5 +93,6 @@ export class AppComponent implements OnInit {
     this.error = null;
     this.selectedFile = null;
     this.audioUrl = null;
+    this.transcribedText = '';
   }
 }
