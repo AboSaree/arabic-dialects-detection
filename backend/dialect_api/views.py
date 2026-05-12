@@ -996,7 +996,7 @@ def transcribe_audio(request):
 
         audio_bytes = b''.join(chunk for chunk in audio_file.chunks())
         resp = requests.post(
-            'https://api.deepgram.com/v1/listen?model=nova-3&language=ar',
+            'https://api.deepgram.com/v1/listen?model=nova-3&language=ar&punctuate=true&words=true',
             headers=headers,
             data=audio_bytes,
             timeout=60,
@@ -1015,12 +1015,23 @@ def transcribe_audio(request):
 
         resp.raise_for_status()
 
-        transcript = resp.json()['results']['channels'][0]['alternatives'][0]['transcript']
+        alternative = resp.json()['results']['channels'][0]['alternatives'][0]
+        transcript = alternative.get('transcript', '').strip()
+        raw_words = alternative.get('words', [])
+
+        words = [
+            {
+                'word':  w.get('word', ''),
+                'start': float(w.get('start', 0)),
+                'end':   float(w.get('end', 0)),
+            }
+            for w in raw_words
+        ]
 
         if not transcript:
             return Response({'error': 'Transcription failed: empty response from Deepgram.'}, status=status.HTTP_502_BAD_GATEWAY)
 
-        return Response({'words': [], 'full_text': transcript, 'text': transcript})
+        return Response({'words': words, 'full_text': transcript, 'text': transcript})
 
     except requests.RequestException as e:
         traceback.print_exc()
@@ -1030,13 +1041,21 @@ def transcribe_audio(request):
         return Response({'error': f'Transcription failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# ── Dialect-to-voice mapping for ElevenLabs TTS ────────────────────────────────
-ELEVENLABS_VOICE_MAP = {
-    'Egyptian':  'EXAVITQu4vr4xnSDxMaL',
-    'Gulf':      'EXAVITQu4vr4xnSDxMaL',
-    'Levantine': 'EXAVITQu4vr4xnSDxMaL',
-    'Maghrebi':  'EXAVITQu4vr4xnSDxMaL',
-}
+
+ELEVENLABS_VOICES = [
+    {"id": "nPczCjzI2devNBz1zQrb", "name": "Brian",   "description": "Deep, Resonant and Comforting"},
+    {"id": "cjVigY5qzO86Huf0OWal", "name": "Eric",    "description": "Smooth, Trustworthy"},
+    {"id": "JBFqnCBsd6RMkjVDRZzb", "name": "George",  "description": "Warm, Captivating Storyteller"},
+    {"id": "onwK4e9ZLuTAKqWW03F9", "name": "Daniel",  "description": "Steady Broadcaster"},
+    {"id": "XrExE9yKIg1WjnnlVkGX", "name": "Matilda", "description": "Knowledgeable, Professional"},
+]
+
+_ELEVENLABS_VOICE_IDS = {voice["id"] for voice in ELEVENLABS_VOICES}
+
+
+@api_view(['GET'])
+def list_voices(request):
+    return Response(ELEVENLABS_VOICES)
 
 
 @api_view(['POST'])
@@ -1055,7 +1074,7 @@ def text_to_speech(request):
     from django.http import HttpResponse
 
     text = request.data.get('text', '').strip()
-    dialect = request.data.get('dialect', '').strip()
+    voice_id = request.data.get('voice_id', '').strip()
 
     if not text:
         return Response({'error': 'No text provided.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -1067,8 +1086,8 @@ def text_to_speech(request):
             status=status.HTTP_503_SERVICE_UNAVAILABLE
         )
 
-    # Map dialect to voice ID (fallback to default if dialect not found)
-    voice_id = ELEVENLABS_VOICE_MAP.get(dialect, 'EXAVITQu4vr4xnSDxMaL')
+    if voice_id not in _ELEVENLABS_VOICE_IDS:
+        voice_id = 'nPczCjzI2devNBz1zQrb'
 
     try:
         client = ElevenLabs(api_key=api_key)

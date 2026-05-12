@@ -188,20 +188,44 @@
         <p class="converted-text" dir="rtl">{{ conversionResult.converted_text }}</p>
 
         <!-- TTS Pronounce button -->
-        <div class="tts-row">
-          <button
-            class="tts-btn"
-            [disabled]="ttsState === 'loading'"
-            (click)="pronounce()">
-            @if (ttsState === 'loading') {
-              <span class="spinner"></span> Generating audio…
-            } @else if (ttsState === 'playing') {
-              🔊 Playing…
-            } @else {
-              🔊 Pronounce in {{ conversionResult.target_dialect }}
+        <div class="tts-row" style="flex-direction: column; align-items: flex-start;">
+          <div style="display: flex; flex-direction: column; gap: 12px; align-items: flex-start; width: 100%;">
+            <div class="tts-voice-picker">
+              @for (v of voices; track v.id) {
+                <button
+                  type="button"
+                  class="tts-voice-pill"
+                  [class.active]="selectedVoiceId === v.id"
+                  [title]="v.description"
+                  (click)="selectVoice(v.id)">
+                  {{ v.name }}
+                </button>
+              }
+            </div>
+
+            <button
+              class="tts-btn"
+              [disabled]="ttsState === 'loading' || !conversionResult"
+              (click)="speakConverted()">
+              @if (ttsState === 'loading') {
+                <span class="spinner"></span> Generating...
+              } @else if (ttsState === 'playing') {
+                ⏸ Pause
+              } @else {
+                🔊 Speak
+              }
+            </button>
+
+            @if (ttsDownloadUrl) {
+              <a class="reset-btn"
+                 [href]="ttsDownloadUrl"
+                 [download]="ttsDownloadName"
+                 style="display: inline-flex; align-items: center; text-decoration: none; width: fit-content;">
+                ⬇ Download Audio
+              </a>
             }
-          </button>
-          <span class="tts-note">TTS model — coming soon</span>
+          </div>
+          <span class="tts-note">Choose a voice, then generate audio.</span>
         </div>
       </div>
     }

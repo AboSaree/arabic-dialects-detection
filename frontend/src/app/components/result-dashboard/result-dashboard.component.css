@@ -571,6 +571,37 @@
   font-size: 0.82rem;
 }
 
+.tts-voice-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tts-voice-pill {
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  color: var(--text-secondary);
+  padding: 7px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.tts-voice-pill:hover {
+  border-color: var(--border-gold);
+  color: var(--text-primary);
+}
+
+.tts-voice-pill.active {
+  border-color: var(--gold);
+  background: rgba(212,175,55,0.14);
+  color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(212,175,55,0.18) inset;
+}
+
 /* Detailed feature plot tabs */
 .feature-tabs {
   display: flex;

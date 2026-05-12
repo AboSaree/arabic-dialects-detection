@@ -5,7 +5,7 @@ import { NgChartsModule } from 'ng2-charts';
 import { ChartConfiguration, TooltipItem } from 'chart.js';
 import 'chart.js/auto';
 import { AnalysisResult, DialectConversionResult } from '../../models/analysis-result.interface';
-import { DialectService } from '../../services/dialect.service';
+import { DialectService, ElevenLabsVoice } from '../../services/dialect.service';
 
 @Component({
   selector: 'app-result-dashboard',
@@ -29,6 +29,12 @@ export class ResultDashboardComponent implements OnInit {
   conversionResult: DialectConversionResult | null = null;
   conversionError = '';
   ttsState: 'idle' | 'loading' | 'playing' = 'idle';
+  voices: ElevenLabsVoice[] = [];
+  selectedVoiceId = 'nPczCjzI2devNBz1zQrb'; // Brian default
+  currentAudio: HTMLAudioElement | null = null;
+  currentAudioUrl: string | null = null;
+  ttsDownloadUrl: string | null = null;
+  ttsDownloadName = 'arabic-tts.mp3';
 
   // Chart data
   zcrChartData: ChartConfiguration['data'] = { labels: [], datasets: [] };
@@ -49,6 +55,10 @@ export class ResultDashboardComponent implements OnInit {
   constructor(private dialectService: DialectService) {}
 
   ngOnInit(): void {
+    this.dialectService.getVoices().subscribe((voices) => {
+      this.voices = voices;
+    });
+
     // Build sorted probability entries
     this.probabilityEntries = Object.entries(this.result.probabilities)
       .map(([dialect, value]) => ({
@@ -240,37 +250,56 @@ export class ResultDashboardComponent implements OnInit {
     });
   }
 
+  selectVoice(voiceId: string): void {
+    this.selectedVoiceId = voiceId;
+    if (this.ttsState === 'playing' && this.currentAudio) {
+      this.currentAudio.pause();
+      this.ttsState = 'idle';
+    }
+  }
+
   /** TTS using ElevenLabs — synthesize and play converted text */
-  pronounce(): void {
+  speakConverted(): void {
     if (!this.conversionResult?.converted_text) return;
+
+    if (this.ttsState === 'playing' && this.currentAudio) {
+      this.currentAudio.pause();
+      this.ttsState = 'idle';
+      return;
+    }
 
     this.ttsState = 'loading';
 
+    if (this.currentAudioUrl) {
+      URL.revokeObjectURL(this.currentAudioUrl);
+      this.currentAudioUrl = null;
+    }
+
     this.dialectService.synthesize(
       this.conversionResult.converted_text,
-      this.selectedTargetDialect
+      this.selectedVoiceId
     ).subscribe({
       next: (audioBlob) => {
         const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
+        this.currentAudioUrl = audioUrl;
+        this.ttsDownloadUrl = audioUrl;
+        this.ttsDownloadName = `arabic-tts-${this.selectedVoiceId}.mp3`;
 
+        const audio = new Audio(audioUrl);
+        this.currentAudio = audio;
         this.ttsState = 'playing';
 
         audio.onended = () => {
           this.ttsState = 'idle';
-          URL.revokeObjectURL(audioUrl);
         };
 
         audio.onerror = () => {
-          console.error('Audio playback error');
           this.ttsState = 'idle';
-          URL.revokeObjectURL(audioUrl);
         };
 
         audio.play().catch((err) => {
           console.error('Failed to play audio:', err);
           this.ttsState = 'idle';
-          URL.revokeObjectURL(audioUrl);
         });
       },
       error: (err) => {
@@ -286,6 +315,16 @@ export class ResultDashboardComponent implements OnInit {
     this.conversionError     = '';
     this.selectedTargetDialect = '';
     this.ttsState            = 'idle';
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio = null;
+    }
+    if (this.currentAudioUrl) {
+      URL.revokeObjectURL(this.currentAudioUrl);
+      this.currentAudioUrl = null;
+    }
+    this.ttsDownloadUrl = null;
+    this.ttsDownloadName = 'arabic-tts.mp3';
   }
 
   get canConvert(): boolean {

@@ -8,6 +8,12 @@ import {
   DialectConversionResult,
 } from '../models/analysis-result.interface';
 
+export interface ElevenLabsVoice {
+  id: string;
+  name: string;
+  description: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -47,6 +53,10 @@ export class DialectService {
     return this.http.get(`${this.apiUrl}/health/`).pipe(catchError(this.handleError));
   }
 
+  getVoices(): Observable<ElevenLabsVoice[]> {
+    return this.http.get<ElevenLabsVoice[]>(`${this.apiUrl}/voices/`).pipe(catchError(this.handleError));
+  }
+
   /**
    * Convert Arabic text to another dialect using Fanar-1-9B-Instruct.
    * Requires HF_TOKEN to be set in the Django environment.
@@ -69,9 +79,9 @@ export class DialectService {
    * Synthesize Arabic text to speech using ElevenLabs API.
    * Returns audio as a Blob.
    */
-  synthesize(text: string, dialect: string): Observable<Blob> {
+  synthesize(text: string, voiceId: string): Observable<Blob> {
     return this.http
-      .post(`${this.apiUrl}/tts/`, { text, dialect }, { responseType: 'blob' })
+      .post(`${this.apiUrl}/tts/`, { text, voice_id: voiceId }, { responseType: 'blob' })
       .pipe(catchError(this.handleError));
   }
 
