@@ -1043,11 +1043,11 @@ def transcribe_audio(request):
 
 
 ELEVENLABS_VOICES = [
-    {"id": "nPczCjzI2devNBz1zQrb", "name": "Brian",   "description": "Deep, Resonant and Comforting"},
-    {"id": "cjVigY5qzO86Huf0OWal", "name": "Eric",    "description": "Smooth, Trustworthy"},
-    {"id": "JBFqnCBsd6RMkjVDRZzb", "name": "George",  "description": "Warm, Captivating Storyteller"},
-    {"id": "onwK4e9ZLuTAKqWW03F9", "name": "Daniel",  "description": "Steady Broadcaster"},
-    {"id": "XrExE9yKIg1WjnnlVkGX", "name": "Matilda", "description": "Knowledgeable, Professional"},
+    {"id": "nPczCjzI2devNBz1zQrb", "name": "Mohamed",   "description": "Deep, Resonant and Comforting"},
+    {"id": "cjVigY5qzO86Huf0OWal", "name": "Hussain",    "description": "Smooth, Trustworthy"},
+    {"id": "JBFqnCBsd6RMkjVDRZzb", "name": "3awadein",  "description": "Warm, Captivating Storyteller"},
+    {"id": "onwK4e9ZLuTAKqWW03F9", "name": "Emad",  "description": "Steady Broadcaster"},
+    {"id": "XrExE9yKIg1WjnnlVkGX", "name": "samiha", "description": "Knowledgeable, Professional"},
 ]
 
 _ELEVENLABS_VOICE_IDS = {voice["id"] for voice in ELEVENLABS_VOICES}
