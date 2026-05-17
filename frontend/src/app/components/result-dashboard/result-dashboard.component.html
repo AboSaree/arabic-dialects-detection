@@ -1,0 +1,494 @@
+<!-- Result Dashboard — full analysis view after classification -->
+<div class="dashboard" [style.--dialect-color]="result.dialect_color">
+
+  <!-- ── TOP RESULT CARD ─────────────────────────────────── -->
+  <div class="result-hero glass-card">
+
+    <!-- Left: Dialect Identity -->
+    <div class="dialect-identity">
+      <div class="dialect-flag">{{ result.dialect_flag || result.dialect_code }}</div>
+      <div class="dialect-name-block">
+        <span class="predicted-label">Identified Dialect</span>
+        <h2 class="dialect-name" [style.color]="result.dialect_color">
+          {{ result.predicted_dialect }}
+        </h2>
+        <span class="dialect-code-badge" [style.border-color]="result.dialect_color"
+              [style.color]="result.dialect_color">
+          {{ result.dialect_code }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Center: Confidence Ring -->
+    <div class="confidence-section">
+      <div class="confidence-ring-wrapper">
+        <svg viewBox="0 0 128 128" class="confidence-svg">
+          <!-- Background track -->
+          <circle cx="64" cy="64" r="54"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.06)"
+                  stroke-width="10"/>
+          <!-- Colored arc -->
+          <circle cx="64" cy="64" r="54"
+                  fill="none"
+                  [attr.stroke]="result.dialect_color"
+                  stroke-width="10"
+                  stroke-linecap="round"
+                  [style.stroke-dasharray]="getCircumference()"
+                  [style.stroke-dashoffset]="getDashOffset()"
+                  [style.filter]="'drop-shadow(0 0 8px ' + result.dialect_color + '88)'"
+                  style="transform: rotate(-90deg); transform-origin: center;
+                         transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)"/>
+          <!-- Center text -->
+          <text x="64" y="60" text-anchor="middle"
+                fill="white" font-size="22" font-weight="800"
+                font-family="Inter, sans-serif">
+            {{ result.confidence }}%
+          </text>
+          <text x="64" y="78" text-anchor="middle"
+                fill="#94A3B8" font-size="10"
+                font-family="Inter, sans-serif">
+            Confidence
+          </text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Right: Audio Info & Probabilities -->
+    <div class="right-panel">
+      <!-- Audio meta -->
+      <div class="audio-meta">
+        <div class="meta-item">
+          <span class="meta-label">📁 File</span>
+          <span class="meta-value">{{ result.audio_info.filename | slice:0:24 }}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">⏱ Duration</span>
+          <span class="meta-value">{{ formatDuration(result.audio_info.duration) }}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">🎚 Sample Rate</span>
+          <span class="meta-value">{{ result.audio_info.sample_rate / 1000 }}kHz</span>
+        </div>
+      </div>
+
+      <!-- Probability bars -->
+      <div class="prob-bars">
+        <p class="section-title" style="font-size:0.75rem; margin-bottom:12px;">
+          All Dialect Probabilities
+        </p>
+        @for (entry of probabilityEntries; track entry.dialect) {
+          <div class="prob-row">
+            <span class="prob-label">{{ entry.dialect }}</span>
+            <div class="progress-bar" style="flex:1">
+              <div class="progress-fill"
+                   [style.width.%]="entry.value"
+                   [style.background]="entry.color">
+              </div>
+            </div>
+            <span class="prob-value" [style.color]="entry.color">{{ entry.value }}%</span>
+          </div>
+        }
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── DIALECT INFO CARD ───────────────────────────────── -->
+  @if (result.dialect_info) {
+    <div class="info-card glass-card" [style.border-left-color]="result.dialect_color">
+      <div class="info-header">
+        <span class="info-icon" [style.color]="result.dialect_color">🌍</span>
+        <h3 class="info-title" [style.color]="result.dialect_color">
+          About {{ result.predicted_dialect }} Arabic
+        </h3>
+      </div>
+      <p class="info-desc">{{ result.dialect_info.description }}</p>
+      <div class="info-chips">
+        <div class="info-chip">
+          🌍 <strong>Region:</strong> {{ result.dialect_info.region }}
+        </div>
+        <div class="info-chip">
+          👥 <strong>Speakers:</strong> {{ result.dialect_info.speakers }}
+        </div>
+        <div class="info-chip" style="grid-column: 1 / -1">
+          🗣️ <strong>Characteristics:</strong> {{ result.dialect_info.characteristics }}
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── DIALECT CONVERTER CARD ─────────────────────────────────────────── -->
+  <div class="converter-card glass-card">
+    <div class="converter-header">
+      <span class="converter-icon">🔄</span>
+      <div>
+        <h3 class="converter-title">Dialect Converter</h3>
+        <p class="converter-subtitle">
+          Translate the transcribed text into another Arabic dialect using Fanar-1-9B
+        </p>
+      </div>
+    </div>
+
+    <!-- Source text preview -->
+    <div class="source-block" *ngIf="transcribedText">
+      <span class="block-label">📝 Original ({{ result.predicted_dialect }})</span>
+      <p class="source-text" dir="rtl">{{ transcribedText }}</p>
+    </div>
+    <div class="source-block no-text" *ngIf="!transcribedText">
+      <span class="block-label">⚠️ No transcription available</span>
+      <p class="source-text" style="color: var(--text-secondary); font-size: 0.85rem;">
+        Run the Transcription tab first to get the text needed for conversion.
+      </p>
+    </div>
+
+    <!-- Target dialect selector -->
+    <div class="converter-controls">
+      <div class="select-wrapper">
+        <span class="select-label">Convert to</span>
+        <select
+          class="dialect-select"
+          [(ngModel)]="selectedTargetDialect"
+          [disabled]="conversionState === 'loading'">
+          <option value="" disabled>Choose a dialect…</option>
+          @for (d of availableDialects; track d) {
+            <option [value]="d" [disabled]="d === result.predicted_dialect">
+              {{ d }}{{ d === result.predicted_dialect ? ' (current)' : '' }}
+            </option>
+          }
+        </select>
+      </div>
+
+      <button
+        class="convert-btn"
+        [disabled]="!canConvert"
+        (click)="convertDialect()">
+        @if (conversionState === 'loading') {
+          <span class="spinner"></span> Converting…
+        } @else {
+          🔁 Convert
+        }
+      </button>
+    </div>
+
+    <!-- Error state -->
+    @if (conversionState === 'error') {
+      <div class="conv-error">
+        ⚠️ {{ conversionError }}
+      </div>
+    }
+
+    <!-- Result -->
+    @if (conversionState === 'done' && conversionResult) {
+      <div class="result-block" style="animation: fadeInUp 0.4s ease">
+        <div class="result-block-header">
+          <span class="block-label">✅ Converted ({{ conversionResult.target_dialect }})</span>
+          <button class="reset-btn" (click)="resetConversion()">✕ Clear</button>
+        </div>
+        <p class="converted-text" dir="rtl">{{ conversionResult.converted_text }}</p>
+
+        <!-- TTS Pronounce button -->
+        <div class="tts-row" style="flex-direction: column; align-items: flex-start;">
+          <div style="display: flex; flex-direction: column; gap: 12px; align-items: flex-start; width: 100%;">
+            <div class="tts-voice-picker">
+              @for (v of voices; track v.id) {
+                <button
+                  type="button"
+                  class="tts-voice-pill"
+                  [class.active]="selectedVoiceId === v.id"
+                  [title]="v.description"
+                  (click)="selectVoice(v.id)">
+                  {{ v.name }}
+                </button>
+              }
+            </div>
+
+            <button
+              class="tts-btn"
+              [disabled]="ttsState === 'loading' || !conversionResult"
+              (click)="speakConverted()">
+              @if (ttsState === 'loading') {
+                <span class="spinner"></span> Generating...
+              } @else if (ttsState === 'playing') {
+                ⏸ Pause
+              } @else {
+                🔊 Speak
+              }
+            </button>
+
+            @if (ttsDownloadUrl) {
+              <a class="reset-btn"
+                 [href]="ttsDownloadUrl"
+                 [download]="ttsDownloadName"
+                 style="display: inline-flex; align-items: center; text-decoration: none; width: fit-content;">
+                ⬇ Download Audio
+              </a>
+            }
+          </div>
+          <span class="tts-note">Choose a voice, then generate audio.</span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- ── VISUALIZATION TABS ──────────────────────────────── -->
+  <div class="viz-section glass-card">
+    <div class="viz-header">
+      <h3 class="viz-title">Signal Analysis &amp; Feature Visualization</h3>
+      <p class="viz-subtitle">Features that distinguish this dialect from others</p>
+    </div>
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+      <button class="tab-btn" [class.active]="activeTab === 'waveform'"
+              (click)="setTab('waveform')">
+        Waveform
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'spectrogram'"
+              (click)="setTab('spectrogram')">
+        Spectrogram
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'mfcc'"
+              (click)="setTab('mfcc')">
+        MFCCs
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'features'"
+              (click)="setTab('features')">
+        Interactive Charts
+      </button>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+
+      @if (activeTab === 'waveform') {
+        <div class="plot-container" style="animation: fadeInUp 0.4s ease">
+          <div class="plot-label">
+            Audio Waveform — amplitude over time
+          </div>
+          <img class="plot-img"
+               [src]="'data:image/png;base64,' + result.plots.waveform"
+               alt="Audio Waveform">
+        </div>
+      }
+
+      @if (activeTab === 'spectrogram') {
+        <div class="plot-container" style="animation: fadeInUp 0.4s ease">
+          <div class="plot-label">
+            Mel Spectrogram — frequency energy distribution over time
+          </div>
+          <img class="plot-img"
+               [src]="'data:image/png;base64,' + result.plots.spectrogram"
+               alt="Mel Spectrogram">
+          <div class="plot-insight">
+            💡 The mel spectrogram shows how energy is distributed across frequency bands over time.
+            Each Arabic dialect has a unique <strong>spectral fingerprint</strong> that the SVM learns.
+          </div>
+        </div>
+      }
+
+      @if (activeTab === 'mfcc') {
+        <div class="plot-container" style="animation: fadeInUp 0.4s ease">
+          <div class="plot-label">
+            MFCC Heatmap &amp; Mean Values — primary classification features (40 coefficients)
+          </div>
+          <img class="plot-img"
+               [src]="'data:image/png;base64,' + result.plots.mfcc"
+               alt="MFCC Heatmap">
+          <div class="plot-insight">
+            💡 <strong>Mel-Frequency Cepstral Coefficients (MFCCs)</strong> capture the vocal tract's
+            resonance characteristics. The 13 MFCC means form the primary feature set for
+            dialect classification — different dialects show distinct MFCC patterns.
+          </div>
+          <!-- MFCC value display -->
+          <div class="mfcc-values">
+            <p class="section-title" style="font-size:0.75rem">MFCC Mean Values</p>
+            <div class="mfcc-grid">
+              @for (val of result.feature_data.mfcc_means; track $index) {
+                <div class="mfcc-cell" [style.background]="val >= 0 ? 'rgba(0,212,170,0.12)' : 'rgba(239,68,68,0.12)'"
+                     [style.border-color]="val >= 0 ? 'rgba(0,212,170,0.3)' : 'rgba(239,68,68,0.3)'">
+                  <span class="mfcc-idx">M{{ $index + 1 }}</span>
+                  <span class="mfcc-val" [style.color]="val >= 0 ? '#00D4AA' : '#FF6B6B'">
+                    {{ val.toFixed(1) }}
+                  </span>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (activeTab === 'features') {
+        <div class="plot-container" style="animation: fadeInUp 0.4s ease">
+          <div class="plot-label">
+            Interactive Feature Visualizations
+          </div>
+
+          <!-- Feature Stats Cards Row -->
+          <div class="feature-stats-enhanced">
+            <div class="stat-card-enhanced">
+              <span class="stat-icon">🧠</span>
+              <div class="stat-info-enhanced">
+                <span class="stat-label-enhanced">MFCCs</span>
+                <span class="stat-desc-enhanced">Pronunciation & vocal tract</span>
+              </div>
+              <span class="stat-value-enhanced">40 coeff.</span>
+            </div>
+            <div class="stat-card-enhanced">
+              <span class="stat-icon">🎼</span>
+              <div class="stat-info-enhanced">
+                <span class="stat-label-enhanced">Chroma</span>
+                <span class="stat-desc-enhanced">Tonal characteristics</span>
+              </div>
+              <span class="stat-value-enhanced">12 bands</span>
+            </div>
+            <div class="stat-card-enhanced">
+              <span class="stat-icon">📊</span>
+              <div class="stat-info-enhanced">
+                <span class="stat-label-enhanced">Spectral Contrast</span>
+                <span class="stat-desc-enhanced">Peak vs Valley energy</span>
+              </div>
+              <span class="stat-value-enhanced">7 sub-bands</span>
+            </div>
+            <div class="stat-card-enhanced">
+              <span class="stat-icon">⚡</span>
+              <div class="stat-info-enhanced">
+                <span class="stat-label-enhanced">Zero Crossing Rate</span>
+                <span class="stat-desc-enhanced">Speech sharpness</span>
+              </div>
+              <span class="stat-value-enhanced">{{ result.feature_data.zcr_mean.toFixed(4) }}</span>
+            </div>
+            <div class="stat-card-enhanced">
+              <span class="stat-icon">🔊</span>
+              <div class="stat-info-enhanced">
+                <span class="stat-label-enhanced">RMS Energy</span>
+                <span class="stat-desc-enhanced">Loudness & dynamics</span>
+              </div>
+              <span class="stat-value-enhanced">{{ result.feature_data.rms_mean.toFixed(4) }}</span>
+            </div>
+          </div>
+
+          @if (result.plots.rms || result.plots.zcr || result.plots.spectral_contrast || result.plots.chroma) {
+            <div class="feature-tabs">
+              @if (result.plots.rms) {
+                <button class="feature-tab-btn"
+                        [class.active]="activeFeatureTab === 'rms'"
+                        (click)="setFeatureTab('rms')">
+                  RMS
+                </button>
+              }
+              @if (result.plots.zcr) {
+                <button class="feature-tab-btn"
+                        [class.active]="activeFeatureTab === 'zcr'"
+                        (click)="setFeatureTab('zcr')">
+                  ZCR
+                </button>
+              }
+              @if (result.plots.spectral_contrast) {
+                <button class="feature-tab-btn"
+                        [class.active]="activeFeatureTab === 'spectral_contrast'"
+                        (click)="setFeatureTab('spectral_contrast')">
+                  Spectral Contrast
+                </button>
+              }
+              @if (result.plots.chroma) {
+                <button class="feature-tab-btn"
+                        [class.active]="activeFeatureTab === 'chroma'"
+                        (click)="setFeatureTab('chroma')">
+                  Chroma
+                </button>
+              }
+            </div>
+
+            <div class="feature-plot-panel">
+              @if (activeFeatureTab === 'rms' && result.plots.rms) {
+                <h4 class="chart-title">RMS Energy</h4>
+                <img class="feature-plot-img"
+                     [src]="'data:image/png;base64,' + result.plots.rms"
+                     alt="RMS Energy">
+              }
+
+              @if (activeFeatureTab === 'zcr' && result.plots.zcr) {
+                <h4 class="chart-title">Zero Crossing Rate</h4>
+                <img class="feature-plot-img"
+                     [src]="'data:image/png;base64,' + result.plots.zcr"
+                     alt="Zero Crossing Rate">
+              }
+
+              @if (activeFeatureTab === 'spectral_contrast' && result.plots.spectral_contrast) {
+                <h4 class="chart-title">Spectral Contrast</h4>
+                <img class="feature-plot-img"
+                     [src]="'data:image/png;base64,' + result.plots.spectral_contrast"
+                     alt="Spectral Contrast Heatmap">
+              }
+
+              @if (activeFeatureTab === 'chroma' && result.plots.chroma) {
+                <h4 class="chart-title">Chroma Features</h4>
+                <img class="feature-plot-img"
+                     [src]="'data:image/png;base64,' + result.plots.chroma"
+                     alt="Chroma Features Heatmap">
+              }
+            </div>
+          }
+
+          <!-- Charts Section -->
+          <div class="charts-grid">
+            <!-- Chroma Features Chart -->
+            @if (chromaChartData.datasets.length) {
+              <div class="chart-wrapper">
+                <h4 class="chart-title">Chroma Features (Pitch Distribution)</h4>
+                <div class="chart-container">
+                  <canvas baseChart 
+                    [type]="'bar'"
+                    [data]="chromaChartData"
+                    [options]="chromaChartOptions">
+                  </canvas>
+                </div>
+                <p class="chart-insight">Shows the distribution of energy across 12 musical pitch classes</p>
+              </div>
+            }
+
+            <!-- Spectral Contrast Chart -->
+            @if (spectralChartData.datasets.length) {
+              <div class="chart-wrapper">
+                <h4 class="chart-title">Spectral Contrast (Energy Differences)</h4>
+                <div class="chart-container">
+                  <canvas baseChart 
+                    [type]="'bar'"
+                    [data]="spectralChartData"
+                    [options]="spectralChartOptions">
+                  </canvas>
+                </div>
+                <p class="chart-insight">Represents the contrast between energy peaks and valleys in frequency bands</p>
+              </div>
+            }
+
+            <!-- Zero Crossing Rate Chart -->
+            @if (zcrChartData.datasets.length) {
+              <div class="chart-wrapper">
+                <h4 class="chart-title">Zero Crossing Rate (Voicing Characteristics)</h4>
+                <div class="chart-container">
+                  <canvas baseChart 
+                    [type]="'line'"
+                    [data]="zcrChartData"
+                    [options]="zcrChartOptions">
+                  </canvas>
+                </div>
+                <p class="chart-insight">Indicates high-frequency content and noise/voicing patterns over time</p>
+              </div>
+            }
+          </div>
+
+          <!-- Fallback: Original static view -->
+          @if (!chromaChartData.datasets.length) {
+            <img class="plot-img"
+                 [src]="'data:image/png;base64,' + result.plots.features"
+                 alt="Feature Visualization">
+          }
+        </div>
+      }
+
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,39 @@
+# ── Python / Django ────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+*.so
+db.sqlite3
+*.log
+.env
+venv/
+# ── Node / Angular ────────────────────────────
+node_modules/
+frontend/.angular/
+frontend/dist/
+frontend/.sass-cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── IDE / Editor ──────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+
+# ── Dataset (too large for git) ───────────────
+adi17_organized/
+madis5_test_samples/
+# ── Misc ──────────────────────────────────────
+*.pyc
+.ipynb_checkpoints/

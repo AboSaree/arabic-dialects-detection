@@ -1,0 +1,12 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pkl
+*.pth
+
+# Django
+db.sqlite3
+madis5_test_samples/
